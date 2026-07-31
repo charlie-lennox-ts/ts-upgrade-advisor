@@ -124,7 +124,7 @@ export default function Home() {
 
           {/* Left */}
           <div className="space-y-5">
-            <CodeInput code={code} onCodeChange={setCode} githubUrl={githubUrl} onGithubUrlChange={setGithubUrl} />
+            <CodeInput code={code} onCodeChange={setCode} githubUrl={githubUrl} onGithubUrlChange={setGithubUrl} onSdkDetected={setSdkVersion} />
             <VersionSelector
               fromVersion={fromVersion} toVersion={toVersion} sdkVersion={sdkVersion}
               onFromChange={setFromVersion} onToChange={setToVersion} onSdkChange={setSdkVersion}

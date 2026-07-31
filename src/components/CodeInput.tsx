@@ -1,6 +1,6 @@
 'use client'
 import { useState, useRef } from 'react'
-import { Code2, Upload, Github, X, FileCode, CheckCircle } from 'lucide-react'
+import { Code2, Upload, Github, X, FileCode, CheckCircle, Sparkles } from 'lucide-react'
 
 type InputMode = 'paste' | 'file' | 'github'
 
@@ -9,24 +9,51 @@ interface CodeInputProps {
   onCodeChange: (code: string) => void
   githubUrl: string
   onGithubUrlChange: (url: string) => void
+  onSdkDetected?: (version: string) => void
 }
 
-export default function CodeInput({ code, onCodeChange, githubUrl, onGithubUrlChange }: CodeInputProps) {
+function detectSdkVersion(text: string): string | null {
+  const pkgMatch = text.match(/"@thoughtspot\/visual-embed-sdk":\s*"[\^~]?(\d+\.\d+[\.\d]*)"/)
+  if (pkgMatch) return pkgMatch[1]
+  const npmMatch = text.match(/@thoughtspot\/visual-embed-sdk@(\d+\.\d+[\.\d]*)/)
+  if (npmMatch) return npmMatch[1]
+  const commentMatch = text.match(/\/\/\s*SDK\s*v?(\d+\.\d+[\.\d]*)/)
+  if (commentMatch) return commentMatch[1]
+  return null
+}
+
+export default function CodeInput({ code, onCodeChange, githubUrl, onGithubUrlChange, onSdkDetected }: CodeInputProps) {
   const [mode, setMode] = useState<InputMode>('paste')
   const [fileName, setFileName] = useState<string | null>(null)
   const [fileError, setFileError] = useState<string | null>(null)
+  const [detectedSdk, setDetectedSdk] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
+
+  const handleCodeChange = (text: string) => {
+    onCodeChange(text)
+    const detected = detectSdkVersion(text)
+    if (detected) {
+      setDetectedSdk(detected)
+      onSdkDetected?.(detected)
+    } else {
+      setDetectedSdk(null)
+    }
+  }
 
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
     setFileError(null)
-    const validExts = ['.js', '.ts', '.jsx', '.tsx', '.mjs']
+    const validExts = ['.js', '.ts', '.jsx', '.tsx', '.mjs', '.json']
     const ext = '.' + file.name.split('.').pop()?.toLowerCase()
-    if (!validExts.includes(ext)) { setFileError('Please upload a .js, .ts, .jsx, or .tsx file'); return }
+    if (!validExts.includes(ext)) { setFileError('Please upload a .js, .ts, .jsx, .tsx, or package.json file'); return }
     if (file.size > 500_000) { setFileError('File too large — max 500KB'); return }
     const reader = new FileReader()
-    reader.onload = (ev) => { onCodeChange(ev.target?.result as string); setFileName(file.name) }
+    reader.onload = (ev) => {
+      const text = ev.target?.result as string
+      handleCodeChange(text)
+      setFileName(file.name)
+    }
     reader.readAsText(file)
   }
 
@@ -46,7 +73,16 @@ export default function CodeInput({ code, onCodeChange, githubUrl, onGithubUrlCh
   return (
     <div className="ts-card p-5">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-sm font-semibold text-white">Your Embed Code</h2>
+        <div className="flex items-center gap-2">
+          <h2 className="text-sm font-semibold text-white">Your Embed Code</h2>
+          {detectedSdk && (
+            <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs"
+                 style={{ background: 'rgba(109,210,103,0.1)', border: '1px solid rgba(109,210,103,0.25)', color: '#6DD267' }}>
+              <Sparkles size={10} />
+              SDK v{detectedSdk} detected
+            </div>
+          )}
+        </div>
         <div className="flex rounded-lg p-1 gap-1" style={{ background: 'rgba(0,0,0,0.3)' }}>
           {tabs.map(tab => (
             <button key={tab.id} onClick={() => setMode(tab.id)}
@@ -64,24 +100,24 @@ export default function CodeInput({ code, onCodeChange, githubUrl, onGithubUrlCh
 
       {mode === 'paste' && (
         <div className="relative">
-          <textarea value={code} onChange={e => onCodeChange(e.target.value)}
-            placeholder={`Paste your ThoughtSpot embed code here…\n\nExamples:\n  import { LiveboardEmbed } from '@thoughtspot/visual-embed-sdk'\n  const embed = new AppEmbed('#container', { ... })\n  init({ thoughtSpotHost: '...', authType: AuthType.TrustedAuthToken })`}
+          <textarea value={code} onChange={e => handleCodeChange(e.target.value)}
+            placeholder={`Paste your ThoughtSpot embed code here…\n\nExamples:\n  import { LiveboardEmbed } from '@thoughtspot/visual-embed-sdk'\n  const embed = new AppEmbed('#container', { ... })\n  init({ thoughtSpotHost: '...', authType: AuthType.TrustedAuthToken })\n\nTip: paste your package.json to auto-detect SDK version`}
             className="w-full h-64 px-4 py-3 text-sm font-mono resize-none leading-relaxed focus:outline-none"
             style={{ ...inputStyle, caretColor: '#04D1FF' }}
             onFocus={e => { (e.target as HTMLElement).style.borderColor = 'rgba(4,209,255,0.35)'; (e.target as HTMLElement).style.boxShadow = '0 0 0 3px rgba(4,209,255,0.06)' }}
             onBlur={e => { (e.target as HTMLElement).style.borderColor = 'rgba(4,209,255,0.12)'; (e.target as HTMLElement).style.boxShadow = 'none' }}
           />
-          {code && <button onClick={() => onCodeChange('')} className="absolute top-3 right-3 transition-colors" style={{ color: '#3A5572' }} onMouseEnter={e => (e.currentTarget as HTMLElement).style.color = '#04D1FF'} onMouseLeave={e => (e.currentTarget as HTMLElement).style.color = '#3A5572'}><X size={14} /></button>}
+          {code && <button onClick={() => { handleCodeChange(''); setDetectedSdk(null) }} className="absolute top-3 right-3 transition-colors" style={{ color: '#3A5572' }} onMouseEnter={e => (e.currentTarget as HTMLElement).style.color = '#04D1FF'} onMouseLeave={e => (e.currentTarget as HTMLElement).style.color = '#3A5572'}><X size={14} /></button>}
           {code && <div className="absolute bottom-3 right-3 text-xs font-mono" style={{ color: '#3A5572' }}>{code.split('\n').length} lines</div>}
         </div>
       )}
 
       {mode === 'file' && (
         <div>
-          <input ref={fileRef} type="file" accept=".js,.ts,.jsx,.tsx,.mjs" onChange={handleFile} className="hidden" />
+          <input ref={fileRef} type="file" accept=".js,.ts,.jsx,.tsx,.mjs,.json" onChange={handleFile} className="hidden" />
           {!fileName ? (
             <button onClick={() => fileRef.current?.click()}
-              className="w-full h-40 flex flex-col items-center justify-center gap-3 rounded-lg transition-all group"
+              className="w-full h-40 flex flex-col items-center justify-center gap-3 rounded-lg transition-all"
               style={{ border: '2px dashed rgba(4,209,255,0.15)', color: '#7AA8C4' }}
               onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(4,209,255,0.4)'; (e.currentTarget as HTMLElement).style.color = '#04D1FF' }}
               onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(4,209,255,0.15)'; (e.currentTarget as HTMLElement).style.color = '#7AA8C4' }}
@@ -89,7 +125,8 @@ export default function CodeInput({ code, onCodeChange, githubUrl, onGithubUrlCh
               <Upload size={24} />
               <div className="text-center">
                 <p className="text-sm font-medium">Click to upload your embed file</p>
-                <p className="text-xs mt-1" style={{ color: '#3A5572' }}>.js .ts .jsx .tsx — max 500KB</p>
+                <p className="text-xs mt-1" style={{ color: '#3A5572' }}>.js .ts .jsx .tsx .json — max 500KB</p>
+                <p className="text-xs mt-1" style={{ color: '#3A5572' }}>Tip: upload package.json to auto-detect SDK version</p>
               </div>
             </button>
           ) : (
@@ -98,10 +135,10 @@ export default function CodeInput({ code, onCodeChange, githubUrl, onGithubUrlCh
                 <CheckCircle size={16} style={{ color: '#6DD267' }} />
                 <div>
                   <p className="text-sm font-medium text-white">{fileName}</p>
-                  <p className="text-xs" style={{ color: '#7AA8C4' }}>{code.split('\n').length} lines loaded</p>
+                  <p className="text-xs" style={{ color: '#7AA8C4' }}>{code.split('\n').length} lines loaded{detectedSdk ? ` · SDK v${detectedSdk} detected` : ''}</p>
                 </div>
               </div>
-              <button onClick={() => { setFileName(null); onCodeChange(''); if (fileRef.current) fileRef.current.value = '' }} style={{ color: '#3A5572' }} onMouseEnter={e => (e.currentTarget as HTMLElement).style.color = '#FFC052'} onMouseLeave={e => (e.currentTarget as HTMLElement).style.color = '#3A5572'}><X size={16} /></button>
+              <button onClick={() => { setFileName(null); handleCodeChange(''); if (fileRef.current) fileRef.current.value = '' }} style={{ color: '#3A5572' }} onMouseEnter={e => (e.currentTarget as HTMLElement).style.color = '#FFC052'} onMouseLeave={e => (e.currentTarget as HTMLElement).style.color = '#3A5572'}><X size={16} /></button>
             </div>
           )}
           {fileError && <p className="mt-2 text-xs" style={{ color: '#FFC052' }}>{fileError}</p>}
@@ -121,9 +158,9 @@ export default function CodeInput({ code, onCodeChange, githubUrl, onGithubUrlCh
             />
             {githubUrl && <button onClick={() => onGithubUrlChange('')} className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: '#3A5572' }}><X size={14} /></button>}
           </div>
-          <div className="p-3 rounded-lg space-y-1.5" style={{ background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(4,209,255,0.08)' }}>
+          <div className="p-3 rounded-lg space-y-1" style={{ background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(4,209,255,0.08)' }}>
             <p className="text-xs font-medium" style={{ color: '#7AA8C4' }}>Fetched fresh on every analysis run</p>
-            <p className="text-xs" style={{ color: '#3A5572' }}>Works with public repos on any branch. Paste a github.com file URL — we convert it to raw automatically.</p>
+            <p className="text-xs" style={{ color: '#3A5572' }}>Works with public repos on any branch. You can also point at your package.json to auto-detect SDK version.</p>
           </div>
           {githubUrl && (
             <div className="flex items-center gap-2 text-xs" style={{ color: '#04D1FF' }}>

@@ -109,13 +109,15 @@ export default function Home() {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <div className={`hidden sm:flex items-center gap-1.5 text-xs px-3 py-1 rounded-full border ${
-              apiKey ? 'border-[rgba(109,210,103,0.3)] bg-[rgba(109,210,103,0.08)] text-[#6DD267]'
-                     : 'border-[rgba(255,192,82,0.3)] bg-[rgba(255,192,82,0.08)] text-[#FFC052]'
-            }`}>
-              <div className={`w-1.5 h-1.5 rounded-full ${apiKey ? 'bg-[#6DD267]' : 'bg-[#FFC052]'}`} />
-              {apiKey ? 'API key set' : 'No API key'}
-            </div>
+            <button onClick={() => setSettingsOpen(true)}
+              className="hidden sm:flex items-center gap-1.5 text-xs px-3 py-1 rounded-full border transition-all"
+              style={apiKey
+                ? { borderColor: 'rgba(109,210,103,0.3)', background: 'rgba(109,210,103,0.08)', color: '#6DD267' }
+                : { borderColor: 'rgba(255,192,82,0.4)', background: 'rgba(255,192,82,0.1)', color: '#FFC052', cursor: 'pointer' }
+              }>
+              <div className={`w-1.5 h-1.5 rounded-full ${apiKey ? 'bg-[#6DD267] animate-pulse' : 'bg-[#FFC052]'}`} />
+              {apiKey ? 'Connected' : 'Add API key'}
+            </button>
             <button onClick={() => setSettingsOpen(true)}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-colors"
               style={{ border: '1px solid rgba(4,209,255,0.2)', color: '#7AA8C4' }}>

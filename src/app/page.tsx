@@ -102,7 +102,7 @@ export default function Home() {
         <div className="max-w-6xl mx-auto px-5 py-10">
           <div className="max-w-2xl">
             <div className="ts-pill mb-5">
-              <Zap size={10} /> Powered by live ThoughtSpot docs
+              <Zap size={10} /> Tailored to your implementation
             </div>
             <h1 className="text-2xl sm:text-3xl font-semibold text-white leading-tight mb-3"
                 style={{ fontFamily: 'Space Grotesk', letterSpacing: '-0.01em' }}>

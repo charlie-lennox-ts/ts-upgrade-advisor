@@ -5,6 +5,7 @@ import SettingsPanel from '@/components/SettingsPanel'
 import CodeInput from '@/components/CodeInput'
 import VersionSelector from '@/components/VersionSelector'
 import AnalysisResults from '@/components/AnalysisResults'
+import { SDK_VERSIONS } from '@/lib/versions'
 
 export default function Home() {
   const [settingsOpen, setSettingsOpen] = useState(false)
@@ -124,7 +125,12 @@ export default function Home() {
 
           {/* Left */}
           <div className="space-y-5">
-            <CodeInput code={code} onCodeChange={setCode} githubUrl={githubUrl} onGithubUrlChange={setGithubUrl} onSdkDetected={setSdkVersion} />
+            <CodeInput code={code} onCodeChange={setCode} githubUrl={githubUrl} onGithubUrlChange={setGithubUrl} onSdkDetected={(v) => {
+              // Normalize e.g. "1.44.0" -> find closest match in SDK_VERSIONS
+              const major = v.split('.').slice(0,2).join('.')
+              const match = SDK_VERSIONS.find(sv => sv.startsWith(major))
+              setSdkVersion(match || v)
+            }} />
             <VersionSelector
               fromVersion={fromVersion} toVersion={toVersion} sdkVersion={sdkVersion}
               onFromChange={setFromVersion} onToChange={setToVersion} onSdkChange={setSdkVersion}

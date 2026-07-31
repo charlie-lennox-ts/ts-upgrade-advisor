@@ -58,29 +58,21 @@ export default function Home() {
               className="sticky top-0 z-40 backdrop-blur-sm">
         <div className="max-w-6xl mx-auto px-5 h-14 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            {/* ThoughtSpot icon mark — just the T-shape and dot */}
-            <svg width="28" height="28" viewBox="0 0 35 35" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <rect width="35" height="35" rx="7" fill="url(#ts-grad)" />
-              <g transform="scale(0.82) translate(3, 3)">
-                <path d="M34.2692 0H0V6.40435H34.2692V0Z" fill="white"/>
-                <path d="M34.2698 8.53918H21.249V14.9435H34.2698V8.53918Z" fill="white"/>
-                <path d="M8.31917 8.53918H0V14.9435H8.31917C11.4274 14.9435 13.9611 17.5 13.9611 20.6363V34.5783H20.3082V20.6363C20.3082 13.9684 14.9275 8.53918 8.31917 8.53918Z" fill="white"/>
-                <path d="M27.766 24.247C24.8275 24.247 22.4375 26.6585 22.4375 29.6235C22.4375 32.5885 24.8275 35 27.766 35C30.7044 35 33.0944 32.5885 33.0944 29.6235C33.0944 26.6585 30.7044 24.247 27.766 24.247Z" fill="white"/>
-              </g>
-              <defs>
-                <linearGradient id="ts-grad" x1="0" y1="0" x2="35" y2="35" gradientUnits="userSpaceOnUse">
-                  <stop offset="0%" stopColor="#04D1FF"/>
-                  <stop offset="100%" stopColor="#714BFB"/>
-                </linearGradient>
-              </defs>
+            {/* ThoughtSpot icon — white paths, no box */}
+            <svg width="22" height="23" viewBox="0 0 46 47" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M45.9298 0H0V8.50682H45.9298V0Z" fill="white"/>
+              <path d="M45.9278 11.3438H28.4766V19.8506H45.9278V11.3438Z" fill="white"/>
+              <path d="M11.1499 11.3438H0V19.8506H11.1499C15.3158 19.8506 18.7115 23.2463 18.7115 27.4122V45.9312H27.2183V27.4122C27.2183 18.5553 20.0068 11.3438 11.1499 11.3438Z" fill="white"/>
+              <path d="M37.2118 32.207C33.2735 32.207 30.0703 35.4102 30.0703 39.3486C30.0703 43.2869 33.2735 46.4901 37.2118 46.4901C41.1502 46.4901 44.3534 43.2869 44.3534 39.3486C44.3534 35.4102 41.1502 32.207 37.2118 32.207Z" fill="white"/>
             </svg>
-            <div className="flex items-baseline gap-2">
-              <span className="font-semibold text-white text-sm" style={{ fontFamily: 'Space Grotesk' }}>
-                TS Upgrade Advisor
-              </span>
-              <span className="text-xs hidden sm:inline" style={{ color: '#7AA8C4' }}>
-                ThoughtSpot Embedded
-              </span>
+            <div>
+              <div className="flex items-baseline gap-2">
+                <span className="font-semibold text-white text-sm" style={{ fontFamily: 'Space Grotesk', letterSpacing: '-0.01em' }}>
+                  ThoughtSpot
+                </span>
+                <span className="text-sm font-light" style={{ color: '#04D1FF' }}>Upgrade Advisor</span>
+              </div>
+              <p className="text-xs" style={{ color: '#7AA8C4', marginTop: '-1px' }}>Understand your upgrade</p>
             </div>
           </div>
 

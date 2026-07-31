@@ -6,8 +6,9 @@ export async function POST(req: NextRequest) {
 
     if (!apiKey) return NextResponse.json({ error: 'API key required' }, { status: 400 })
 
+    const severityOrder: Record<string, number> = { critical: 0, warning: 1, info: 2 }
     const issuesList = analysis.issues
-      .sort((a: any, b: any) => ({ critical: 0, warning: 1, info: 2 }[a.severity] - { critical: 0, warning: 1, info: 2 }[b.severity]))
+      .sort((a: any, b: any) => (severityOrder[a.severity] ?? 3) - (severityOrder[b.severity] ?? 3))
       .map((i: any, idx: number) => `${idx + 1}. [${i.severity.toUpperCase()}] ${i.title}${i.fix ? `\n   Action required: ${i.fix}` : ''}`)
       .join('\n')
 

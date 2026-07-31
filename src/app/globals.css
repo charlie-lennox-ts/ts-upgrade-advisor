@@ -1,74 +1,122 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&family=Inter:wght@300;400;500;600&display=swap');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  --ts-navy: #1D2339;
-  --ts-blue: #2770EF;
-  --ts-teal: #00C7BE;
-  --ts-purple: #7B61FF;
+  --ts-bg:        #08062B;
+  --ts-sidebar:   #0F2044;
+  --ts-card:      #122246;
+  --ts-card-2:    #0F1A3E;
+  --ts-border:    rgba(4, 209, 255, 0.12);
+  --ts-border-2:  rgba(122, 168, 196, 0.15);
+  --ts-cyan:      #04D1FF;
+  --ts-purple:    #714BFB;
+  --ts-amber:     #FFC052;
+  --ts-green:     #6DD267;
+  --ts-text:      #D0E8F5;
+  --ts-muted:     #7AA8C4;
+  --ts-dim:       #3A5572;
 }
 
 * { box-sizing: border-box; }
 
 body {
-  background: #0F1117;
-  color: #F9FAFB;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--ts-bg);
+  color: var(--ts-text);
+  font-family: 'Space Grotesk', 'Inter', -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 
+/* Cards */
+.ts-card {
+  background: var(--ts-card);
+  border: 1px solid var(--ts-border);
+  border-radius: 12px;
+}
+
+.ts-card-2 {
+  background: var(--ts-card-2);
+  border: 1px solid var(--ts-border-2);
+  border-radius: 10px;
+}
+
+/* Gradients */
 .ts-gradient {
-  background: linear-gradient(135deg, #2770EF 0%, #7B61FF 50%, #00C7BE 100%);
+  background: linear-gradient(135deg, #04D1FF 0%, #714BFB 100%);
 }
 
 .ts-gradient-text {
-  background: linear-gradient(135deg, #2770EF, #7B61FF);
+  background: linear-gradient(135deg, #04D1FF, #714BFB);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
-.ts-card {
-  background: #1D2339;
-  border: 1px solid #2B3252;
-  border-radius: 12px;
+.ts-cyan-text { color: var(--ts-cyan); }
+
+/* Glow effects */
+.ts-cyan-glow {
+  box-shadow: 0 0 20px rgba(4, 209, 255, 0.2);
 }
 
-.ts-card-hover:hover {
-  border-color: #2770EF;
-  box-shadow: 0 0 20px rgba(39,112,239,0.15);
-  transition: all 0.2s ease;
+.ts-cyan-border {
+  border-color: rgba(4, 209, 255, 0.4) !important;
 }
 
-/* Code block styling */
+/* Code / mono */
 pre, code {
-  font-family: 'JetBrains Mono', 'Fira Code', monospace;
-  font-size: 0.85em;
+  font-family: 'Space Mono', 'JetBrains Mono', monospace;
+  font-size: 0.82em;
 }
 
 /* Scrollbar */
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: #1D2339; }
-::-webkit-scrollbar-thumb { background: #3D4566; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #2770EF; }
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: var(--ts-bg); }
+::-webkit-scrollbar-thumb { background: var(--ts-dim); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--ts-cyan); }
 
 /* Animations */
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 .animate-fadeIn { animation: fadeIn 0.3s ease forwards; }
 
-@keyframes pulse-blue {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(39,112,239,0.4); }
-  50% { box-shadow: 0 0 0 8px rgba(39,112,239,0); }
+@keyframes cyan-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(4,209,255,0.3); }
+  50%       { box-shadow: 0 0 0 8px rgba(4,209,255,0); }
 }
-.animate-pulse-blue { animation: pulse-blue 2s infinite; }
+.animate-cyan-pulse { animation: cyan-pulse 2s infinite; }
 
-/* Severity badges */
-.badge-critical { background: rgba(239,68,68,0.15); color: #FCA5A5; border: 1px solid rgba(239,68,68,0.3); }
-.badge-warning  { background: rgba(245,158,11,0.15); color: #FCD34D; border: 1px solid rgba(245,158,11,0.3); }
-.badge-info     { background: rgba(39,112,239,0.15); color: #93C5FD; border: 1px solid rgba(39,112,239,0.3); }
-.badge-positive { background: rgba(16,185,129,0.15); color: #6EE7B7; border: 1px solid rgba(16,185,129,0.3); }
+/* Severity badges — using real TS colours */
+.badge-critical { background: rgba(255,192,82,0.1);  color: #FFC052; border: 1px solid rgba(255,192,82,0.25); }
+.badge-warning  { background: rgba(113,75,251,0.1);  color: #A98CFF; border: 1px solid rgba(113,75,251,0.25); }
+.badge-info     { background: rgba(4,209,255,0.08);  color: #04D1FF; border: 1px solid rgba(4,209,255,0.2); }
+.badge-positive { background: rgba(109,210,103,0.1); color: #6DD267; border: 1px solid rgba(109,210,103,0.25); }
+
+/* Pill / tag */
+.ts-pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 3px 12px; border-radius: 20px;
+  font-size: 11px; font-weight: 500; letter-spacing: 0.02em;
+  background: rgba(4,209,255,0.08);
+  color: var(--ts-cyan);
+  border: 1px solid rgba(4,209,255,0.2);
+  font-family: 'Space Mono', monospace;
+  text-transform: uppercase;
+}
+
+/* Input / select base */
+.ts-input {
+  background: rgba(4,209,255,0.04);
+  border: 1px solid var(--ts-border);
+  border-radius: 8px;
+  color: var(--ts-text);
+  transition: border-color 0.15s;
+}
+.ts-input:focus {
+  outline: none;
+  border-color: rgba(4,209,255,0.4);
+  box-shadow: 0 0 0 3px rgba(4,209,255,0.06);
+}

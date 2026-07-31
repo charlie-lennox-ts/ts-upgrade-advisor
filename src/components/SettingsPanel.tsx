@@ -3,10 +3,7 @@ import { useState, useEffect } from 'react'
 import { Key, X, Eye, EyeOff, CheckCircle, AlertCircle } from 'lucide-react'
 
 interface SettingsPanelProps {
-  isOpen: boolean
-  onClose: () => void
-  apiKey: string
-  onApiKeyChange: (key: string) => void
+  isOpen: boolean; onClose: () => void; apiKey: string; onApiKeyChange: (key: string) => void
 }
 
 export default function SettingsPanel({ isOpen, onClose, apiKey, onApiKeyChange }: SettingsPanelProps) {
@@ -23,114 +20,80 @@ export default function SettingsPanel({ isOpen, onClose, apiKey, onApiKeyChange 
     setTimeout(() => setSaved(false), 2000)
   }
 
-  const handleClear = () => {
-    setLocalKey('')
-    onApiKeyChange('')
-    localStorage.removeItem('ts_advisor_api_key')
-  }
-
   if (!isOpen) return null
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-      {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
+      <div className="absolute inset-0 backdrop-blur-sm" style={{ background: 'rgba(8,6,43,0.8)' }} onClick={onClose} />
+      <div className="relative w-full max-w-lg mx-4 p-6 animate-fadeIn ts-card" style={{ boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}>
 
-      {/* Panel */}
-      <div className="relative ts-card w-full max-w-lg mx-4 p-6 animate-fadeIn shadow-ts-lg">
-        {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-ts-blue/20 flex items-center justify-center">
-              <Key size={16} className="text-ts-blue" />
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'rgba(4,209,255,0.1)', border: '1px solid rgba(4,209,255,0.2)' }}>
+              <Key size={15} style={{ color: '#04D1FF' }} />
             </div>
-            <h2 className="text-lg font-semibold text-white">Settings</h2>
+            <h2 className="text-base font-semibold text-white">Settings</h2>
           </div>
-          <button onClick={onClose} className="text-ts-gray-400 hover:text-white transition-colors">
-            <X size={20} />
+          <button onClick={onClose} style={{ color: '#3A5572' }} onMouseEnter={e => (e.currentTarget as HTMLElement).style.color = '#D0E8F5'} onMouseLeave={e => (e.currentTarget as HTMLElement).style.color = '#3A5572'}>
+            <X size={18} />
           </button>
         </div>
 
-        {/* API Key section */}
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-ts-gray-300 mb-2">
-              Anthropic API Key
-            </label>
-            <p className="text-xs text-ts-gray-400 mb-3">
-              Your key is stored only in your browser (localStorage) and sent directly to the Anthropic API. 
-              It is never stored on our servers.
+            <label className="block text-sm font-medium text-white mb-1">Anthropic API Key</label>
+            <p className="text-xs mb-3" style={{ color: '#7AA8C4' }}>
+              Stored only in your browser. Sent directly to Anthropic — never logged by this service.
             </p>
             <div className="relative">
-              <input
-                type={showKey ? 'text' : 'password'}
-                value={localKey}
-                onChange={e => setLocalKey(e.target.value)}
+              <input type={showKey ? 'text' : 'password'} value={localKey} onChange={e => setLocalKey(e.target.value)}
                 placeholder="sk-ant-api03-..."
-                className="w-full bg-ts-gray-700 border border-ts-gray-600 rounded-lg px-4 py-3 pr-12
-                           text-white text-sm placeholder:text-ts-gray-500
-                           focus:outline-none focus:border-ts-blue focus:ring-1 focus:ring-ts-blue/30
-                           font-mono"
+                className="w-full px-4 py-3 pr-12 text-sm font-mono focus:outline-none"
+                style={{ background: 'rgba(4,209,255,0.04)', border: '1px solid rgba(4,209,255,0.15)', borderRadius: '8px', color: '#D0E8F5' }}
+                onFocus={e => (e.target as HTMLElement).style.borderColor = 'rgba(4,209,255,0.4)'}
+                onBlur={e => (e.target as HTMLElement).style.borderColor = 'rgba(4,209,255,0.15)'}
               />
-              <button
-                onClick={() => setShowKey(!showKey)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-ts-gray-400 hover:text-white transition-colors"
-              >
-                {showKey ? <EyeOff size={16} /> : <Eye size={16} />}
+              <button onClick={() => setShowKey(!showKey)} className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: '#3A5572' }}>
+                {showKey ? <EyeOff size={15} /> : <Eye size={15} />}
               </button>
             </div>
           </div>
 
-          {/* Key status */}
           {localKey && (
-            <div className={`flex items-center gap-2 text-xs px-3 py-2 rounded-lg ${
-              localKey.startsWith('sk-ant-') 
-                ? 'bg-green-500/10 text-green-400 border border-green-500/20' 
-                : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-            }`}>
-              {localKey.startsWith('sk-ant-') 
+            <div className={`flex items-center gap-2 text-xs px-3 py-2 rounded-lg ${localKey.startsWith('sk-ant-') ? '' : ''}`}
+                 style={localKey.startsWith('sk-ant-')
+                   ? { background: 'rgba(109,210,103,0.08)', color: '#6DD267', border: '1px solid rgba(109,210,103,0.2)' }
+                   : { background: 'rgba(255,192,82,0.08)', color: '#FFC052', border: '1px solid rgba(255,192,82,0.2)' }
+                 }>
+              {localKey.startsWith('sk-ant-')
                 ? <><CheckCircle size={12} /> Looks like a valid Anthropic key</>
-                : <><AlertCircle size={12} /> This doesn't look like an Anthropic API key (should start with sk-ant-)</>
+                : <><AlertCircle size={12} /> Should start with sk-ant-</>
               }
             </div>
           )}
 
-          <div className="text-xs text-ts-gray-500 bg-ts-gray-800/50 rounded-lg p-3 border border-ts-gray-700">
-            <strong className="text-ts-gray-400">Get an API key:</strong> Visit{' '}
-            <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener noreferrer"
-               className="text-ts-blue hover:underline">
+          <div className="text-xs p-3 rounded-lg" style={{ background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(4,209,255,0.08)', color: '#7AA8C4' }}>
+            Get a key at{' '}
+            <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener noreferrer" style={{ color: '#04D1FF' }}>
               console.anthropic.com
             </a>
-            {' '}→ Settings → API Keys. Analysis uses claude-sonnet-4-6 (~$0.003 per analysis).
+            {' '}→ Settings → API Keys. Each analysis costs ~$0.003.
           </div>
 
-          {/* Action buttons */}
-          <div className="flex gap-3 pt-2">
-            <button
-              onClick={handleSave}
-              className="flex-1 py-2.5 px-4 bg-ts-blue hover:bg-ts-blue-dark text-white text-sm font-medium 
-                         rounded-lg transition-colors flex items-center justify-center gap-2"
+          <div className="flex gap-3 pt-1">
+            <button onClick={handleSave}
+              className="flex-1 py-2.5 px-4 text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2 ts-gradient text-white"
             >
-              {saved ? <><CheckCircle size={14} /> Saved!</> : 'Save Key'}
+              {saved ? <><CheckCircle size={13} /> Saved!</> : 'Save Key'}
             </button>
             {localKey && (
-              <button
-                onClick={handleClear}
-                className="py-2.5 px-4 border border-ts-gray-600 hover:border-red-500/50 
-                           text-ts-gray-400 hover:text-red-400 text-sm rounded-lg transition-colors"
-              >
+              <button onClick={() => { setLocalKey(''); onApiKeyChange(''); localStorage.removeItem('ts_advisor_api_key') }}
+                className="py-2.5 px-4 text-sm rounded-lg transition-colors"
+                style={{ border: '1px solid rgba(255,192,82,0.2)', color: '#FFC052', background: 'transparent' }}>
                 Clear
               </button>
             )}
           </div>
-        </div>
-
-        <div className="mt-6 pt-6 border-t border-ts-gray-700">
-          <p className="text-xs text-ts-gray-500">
-            <strong className="text-ts-gray-400">Data privacy:</strong> Your embed code is sent directly 
-            to Anthropic's API using your key. ThoughtSpot Upgrade Advisor does not log, store, or 
-            transmit your code to any other service.
-          </p>
         </div>
       </div>
     </div>

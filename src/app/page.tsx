@@ -1,18 +1,19 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { Settings, Zap, AlertCircle, Loader2, ChevronDown, ChevronUp, Edit2 } from 'lucide-react'
+import { Settings, Zap, AlertCircle, Loader2, Edit2 } from 'lucide-react'
 import SettingsPanel from '@/components/SettingsPanel'
 import CodeInput from '@/components/CodeInput'
 import VersionSelector from '@/components/VersionSelector'
 import AnalysisResults from '@/components/AnalysisResults'
 import { SDK_VERSIONS } from '@/lib/versions'
 
+// Fix: check for instantiation (new XEmbed) not just import mentions
 function detectEmbedType(code: string): string | null {
-  if (code.includes('AppEmbed')) return 'AppEmbed'
-  if (code.includes('LiveboardEmbed')) return 'LiveboardEmbed'
-  if (code.includes('SpotterEmbed')) return 'SpotterEmbed'
-  if (code.includes('SearchEmbed')) return 'SearchEmbed'
-  if (code.includes('SageEmbed')) return 'SageEmbed'
+  if (/new\s+AppEmbed\s*\(/.test(code)) return 'AppEmbed'
+  if (/new\s+LiveboardEmbed\s*\(/.test(code)) return 'LiveboardEmbed'
+  if (/new\s+SpotterEmbed\s*\(/.test(code)) return 'SpotterEmbed'
+  if (/new\s+SearchEmbed\s*\(/.test(code)) return 'SearchEmbed'
+  if (/new\s+SageEmbed\s*\(/.test(code)) return 'SageEmbed'
   return null
 }
 
@@ -31,6 +32,7 @@ export default function Home() {
   const [emailLoading, setEmailLoading] = useState(false)
   const [emailDraft, setEmailDraft] = useState<{ subject: string; body: string } | null>(null)
   const [emailError, setEmailError] = useState<string | null>(null)
+  const [showHomeConfirm, setShowHomeConfirm] = useState(false)
 
   useEffect(() => {
     const stored = localStorage.getItem('ts_advisor_api_key')
@@ -38,6 +40,21 @@ export default function Home() {
   }, [])
 
   const canAnalyze = (code.trim() || githubUrl.trim()) && fromVersion && toVersion && apiKey
+
+  const handleLogoClick = () => {
+    if (analysis || emailDraft) {
+      setShowHomeConfirm(true)
+    }
+    // If no results, nothing to warn about — logo is just decorative
+  }
+
+  const handleHomeConfirm = () => {
+    setAnalysis(null)
+    setEmailDraft(null)
+    setInputsCollapsed(false)
+    setError(null)
+    setShowHomeConfirm(false)
+  }
 
   const handleAnalyze = async () => {
     if (!canAnalyze) return
@@ -90,10 +107,37 @@ export default function Home() {
   return (
     <div className="min-h-screen" style={{ background: '#08062B' }}>
 
+      {/* Home confirmation modal */}
+      {showHomeConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 backdrop-blur-sm" style={{ background: 'rgba(8,6,43,0.85)' }}
+               onClick={() => setShowHomeConfirm(false)} />
+          <div className="relative ts-card p-6 max-w-sm mx-4 animate-fadeIn"
+               style={{ boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}>
+            <h3 className="text-base font-semibold text-white mb-2">Start over?</h3>
+            <p className="text-sm mb-5" style={{ color: '#7AA8C4' }}>
+              This will clear your current analysis and email draft. Your embed code and version selections will stay.
+            </p>
+            <div className="flex gap-3">
+              <button onClick={handleHomeConfirm}
+                className="flex-1 py-2.5 rounded-lg text-sm font-medium text-white"
+                style={{ background: 'linear-gradient(135deg, #04D1FF, #714BFB)' }}>
+                Yes, start over
+              </button>
+              <button onClick={() => setShowHomeConfirm(false)}
+                className="flex-1 py-2.5 rounded-lg text-sm"
+                style={{ border: '1px solid rgba(4,209,255,0.2)', color: '#7AA8C4' }}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <header style={{ background: '#0F2044', borderBottom: '1px solid rgba(4,209,255,0.1)' }} className="sticky top-0 z-40">
         <div className="max-w-4xl mx-auto px-5 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+          <button onClick={handleLogoClick} className="flex items-center gap-3 transition-opacity hover:opacity-80">
             <svg width="22" height="23" viewBox="0 0 46 47" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M45.9298 0H0V8.50682H45.9298V0Z" fill="white"/>
               <path d="M45.9278 11.3438H28.4766V19.8506H45.9278V11.3438Z" fill="white"/>
@@ -107,13 +151,13 @@ export default function Home() {
               </div>
               <p className="text-xs" style={{ color: '#7AA8C4', marginTop: '-1px' }}>Understand your upgrade</p>
             </div>
-          </div>
+          </button>
           <div className="flex items-center gap-3">
             <button onClick={() => setSettingsOpen(true)}
               className="hidden sm:flex items-center gap-1.5 text-xs px-3 py-1 rounded-full border transition-all"
               style={apiKey
                 ? { borderColor: 'rgba(109,210,103,0.3)', background: 'rgba(109,210,103,0.08)', color: '#6DD267' }
-                : { borderColor: 'rgba(255,192,82,0.4)', background: 'rgba(255,192,82,0.1)', color: '#FFC052', cursor: 'pointer' }
+                : { borderColor: 'rgba(255,192,82,0.4)', background: 'rgba(255,192,82,0.1)', color: '#FFC052' }
               }>
               <div className={`w-1.5 h-1.5 rounded-full ${apiKey ? 'bg-[#6DD267] animate-pulse' : 'bg-[#FFC052]'}`} />
               {apiKey ? 'Connected' : 'Add API key'}
@@ -144,7 +188,6 @@ export default function Home() {
 
         {/* STEP 1 — Inputs */}
         {inputsCollapsed ? (
-          /* Collapsed summary bar */
           <div className="ts-card px-5 py-3 flex items-center justify-between"
                style={{ border: '1px solid rgba(4,209,255,0.2)' }}>
             <div className="flex items-center gap-3 text-sm flex-wrap">
@@ -166,7 +209,6 @@ export default function Home() {
             </button>
           </div>
         ) : (
-          /* Expanded inputs */
           <div className="space-y-5">
             <CodeInput code={code} onCodeChange={setCode} githubUrl={githubUrl} onGithubUrlChange={setGithubUrl}
               onSdkDetected={(v) => {
@@ -191,9 +233,9 @@ export default function Home() {
               {!canAnalyze && !loading && (
                 <div className="space-y-1.5">
                   {[
-                    { done: !hasNoApiKey,    label: 'Set your Anthropic API key in Settings' },
-                    { done: !hasNoCode,      label: 'Add your embed code (paste, upload, or GitHub URL)' },
-                    { done: !hasNoVersions,  label: 'Select from and to cluster versions' },
+                    { done: !hasNoApiKey,   label: 'Set your Anthropic API key in Settings' },
+                    { done: !hasNoCode,     label: 'Add your embed code (paste, upload, or GitHub URL)' },
+                    { done: !hasNoVersions, label: 'Select from and to cluster versions' },
                   ].map((item, i) => (
                     <div key={i} className={`flex items-center gap-2 text-xs ${item.done ? 'line-through' : ''}`}
                          style={{ color: item.done ? '#3A5572' : '#7AA8C4' }}>
@@ -218,7 +260,7 @@ export default function Home() {
           </div>
         )}
 
-        {/* Loading state */}
+        {/* Loading */}
         {loading && (
           <div className="ts-card p-10 flex flex-col items-center justify-center text-center gap-4 animate-fadeIn">
             <div className="w-12 h-12 rounded-full flex items-center justify-center animate-cyan-pulse"
@@ -238,12 +280,12 @@ export default function Home() {
           </div>
         )}
 
-        {/* STEP 2 — Analysis results */}
+        {/* STEP 2 — Results */}
         {analysis && !loading && (
           <AnalysisResults analysis={analysis} fromVersion={fromVersion} toVersion={toVersion} />
         )}
 
-        {/* STEP 3 — Generate email */}
+        {/* STEP 3 — Email */}
         {analysis && !loading && !emailDraft && (
           <div className="ts-card p-5">
             <div className="flex items-center justify-between">
@@ -263,7 +305,6 @@ export default function Home() {
           </div>
         )}
 
-        {/* Email draft */}
         {emailDraft && (
           <EmailDraftCard email={emailDraft} onRegenerate={handleGenerateEmail} emailLoading={emailLoading} />
         )}
@@ -301,7 +342,6 @@ function EmailDraftCard({ email, onRegenerate, emailLoading }: { email: { subjec
           </button>
         </div>
       </div>
-
       <div className="rounded-lg overflow-hidden" style={{ border: '1px solid rgba(4,209,255,0.1)' }}>
         <div className="px-4 py-3" style={{ background: 'rgba(0,0,0,0.2)', borderBottom: '1px solid rgba(4,209,255,0.08)' }}>
           <span className="text-xs font-medium uppercase tracking-wide mr-3" style={{ color: '#3A5572' }}>Subject</span>

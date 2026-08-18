@@ -12,12 +12,12 @@ export async function POST(req: NextRequest) {
       .map((i: any, idx: number) => `${idx + 1}. [${i.severity.toUpperCase()}] ${i.title}${i.fix ? `\n   Action required: ${i.fix}` : ''}`)
       .join('\n')
 
-    const prompt = `You are writing an email on behalf of a ThoughtSpot Solutions Engineer to a customer's developer team.
+    const prompt = `You are writing an internal email from a developer to their own engineering team.
 
-The customer's ThoughtSpot cluster is being upgraded from ${fromVersion} to ${toVersion}.
+The team's ThoughtSpot cluster is being upgraded from ${fromVersion} to ${toVersion}.
 Their current SDK version is ${sdkVersion || 'unknown'}.
 
-Here is the impact analysis that was just run against their embed code:
+Here is the impact analysis run against their embed code:
 
 SUMMARY:
 ${analysis.summary}
@@ -27,15 +27,17 @@ ${issuesList || 'No issues found.'}
 
 ${analysis.opportunities?.length > 0 ? `NEW FEATURES AVAILABLE:\n${analysis.opportunities.map((o: any) => `- ${o.title}: ${o.detail}`).join('\n')}` : ''}
 
-Write a professional but friendly email from the ThoughtSpot Solutions Engineer to the customer's dev team.
+Write a professional but friendly email from the developer to their own team.
 
-The email should:
-- Open with a brief heads up about the upcoming upgrade (mention the version numbers)
-- List the specific issues they need to address before or after upgrade, numbered, with clear actions
-- Mention any new features they could take advantage of (if any)
-- Close with an offer to help and next steps
-- Be direct and practical — developers don't want waffle
-- NOT mention AI, Claude, or automated analysis — write as if the SE wrote it personally
+Rules:
+- Write from the perspective of someone on the team sending to their colleagues — use "our ThoughtSpot cluster", "our embed", "we need to", "I wanted to flag"
+- Open with "Hi team," 
+- Briefly explain that OUR cluster is being upgraded from ${fromVersion} to ${toVersion}
+- List the specific issues numbered with clear actions the team needs to take
+- Mention any new features worth considering (if any)
+- Close with "Regards," on its own line — no name, no company, no title
+- Be direct and practical
+- Do NOT mention AI, Claude, ThoughtSpot Solutions Engineers, or automated analysis
 - Use British English spelling
 
 Return a JSON object with exactly this structure (no markdown, no preamble):

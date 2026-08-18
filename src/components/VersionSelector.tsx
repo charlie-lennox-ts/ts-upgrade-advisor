@@ -12,8 +12,6 @@ export default function VersionSelector({ fromVersion, toVersion, sdkVersion, on
   const toIdx   = CLUSTER_VERSIONS.findIndex(v => v.value === toVersion)
   const versionSpan = fromIdx !== -1 && toIdx !== -1 ? fromIdx - toIdx : 0
   const bigJump = versionSpan > 4
-  const targetCluster = CLUSTER_VERSIONS.find(v => v.value === toVersion)
-  const sdkBehind = targetCluster && sdkVersion && sdkVersion < targetCluster.sdkRecommended
 
   const selectStyle = {
     width: '100%',
@@ -56,29 +54,22 @@ export default function VersionSelector({ fromVersion, toVersion, sdkVersion, on
       {bigJump && (
         <div className="flex items-start gap-2 rounded-lg px-3 py-2.5" style={{ background: 'rgba(255,192,82,0.08)', border: '1px solid rgba(255,192,82,0.2)' }}>
           <AlertTriangle size={13} className="shrink-0 mt-0.5" style={{ color: '#FFC052' }} />
-          <p className="text-xs" style={{ color: '#FFC052' }}>Large version jump ({versionSpan} releases). Analysis will cover all intermediate breaking changes.</p>
+          <p className="text-xs" style={{ color: '#FFC052' }}>Large version jump ({versionSpan} releases). The analysis will cover all intermediate breaking changes — there may be several items to address.</p>
         </div>
       )}
 
       <div>
-        <label style={labelStyle}>Current SDK version <span style={{ color: '#3A5572', fontWeight: 400 }}>(check your package.json)</span></label>
-        <div className="flex gap-2">
-          <select value={sdkVersion} onChange={e => onSdkChange(e.target.value)} style={{ ...selectStyle, flex: 1 }}>
-            <option value="">Unknown / not sure</option>
-            {SDK_VERSIONS.map(v => <option key={v} value={v}>v{v}</option>)}
-          </select>
-          {targetCluster && (
-            <div className="flex items-center px-3 py-2 rounded-lg text-xs whitespace-nowrap"
-                 style={{ background: 'rgba(4,209,255,0.06)', border: '1px solid rgba(4,209,255,0.12)', color: '#7AA8C4' }}>
-              Recommended: <span style={{ color: '#04D1FF', fontWeight: 600, marginLeft: 4 }}>v{targetCluster.sdkRecommended}</span>
-            </div>
-          )}
-        </div>
-        {sdkBehind && targetCluster && (
-          <p className="mt-1.5 text-xs flex items-center gap-1" style={{ color: '#FFC052' }}>
-            <AlertTriangle size={11} /> SDK v{sdkVersion} is behind recommended v{targetCluster.sdkRecommended} for {toVersion}
-          </p>
-        )}
+        <label style={labelStyle}>
+          Current SDK version
+          <span style={{ color: '#3A5572', fontWeight: 400, marginLeft: 4 }}>(check your package.json)</span>
+        </label>
+        <select value={sdkVersion} onChange={e => onSdkChange(e.target.value)} style={selectStyle}>
+          <option value="">Unknown / not sure</option>
+          {SDK_VERSIONS.map(v => <option key={v} value={v}>v{v}</option>)}
+        </select>
+        <p className="text-xs mt-2" style={{ color: '#3A5572' }}>
+          SDK version recommendations are sourced from live ThoughtSpot documentation during analysis — not from this tool.
+        </p>
       </div>
     </div>
   )

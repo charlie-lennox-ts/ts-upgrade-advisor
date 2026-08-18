@@ -311,6 +311,16 @@ export default function Home() {
 
       </main>
 
+      {/* Footer */}
+      <footer className="max-w-4xl mx-auto px-5 py-6 flex items-center justify-between" style={{ borderTop: '1px solid rgba(4,209,255,0.06)', marginTop: '2rem' }}>
+        <p className="text-xs" style={{ color: '#3A5572' }}>
+          Analysis powered by live ThoughtSpot docs · Your code is never stored
+        </p>
+        <a href="/how-it-works" className="text-xs hover:underline transition-colors" style={{ color: '#7AA8C4' }}>
+          How it works & privacy →
+        </a>
+      </footer>
+
       <SettingsPanel isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} apiKey={apiKey} onApiKeyChange={setApiKey} />
     </div>
   )
@@ -356,3 +366,5 @@ function EmailDraftCard({ email, onRegenerate, emailLoading }: { email: { subjec
     </div>
   )
 }
+
+// Note: Footer is appended separately — see layout or add inline below main

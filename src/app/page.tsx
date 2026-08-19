@@ -23,7 +23,7 @@ interface CodeScore {
   tips: string[]
 }
 
-function scoreCode(code: string): CodeScore {
+function scoreCode(code: string, sdkVersion: string): CodeScore {
   const detected: string[] = []
   const missing: string[] = []
   const tips: string[] = []
@@ -40,6 +40,7 @@ function scoreCode(code: string): CodeScore {
     missing.push('Embed initialisation code')
     tips.push('Add your embed file — the one containing init() and your component setup')
     tips.push('The SDK version has been detected but without embed code the analysis will be generic')
+    if (!sdkVersion) tips.push('Select your SDK version from the dropdown, or paste your package.json to auto-detect it')
     return { pass: false, detected, missing, tips }
   }
 
@@ -56,6 +57,9 @@ function scoreCode(code: string): CodeScore {
   else tips.push('If you use custom CSS variables (--ts-var-*), include them for CSS impact analysis')
 
   if (hasActions) detected.push('Action enum usage found')
+
+  if (sdkVersion) detected.push(`SDK version v${sdkVersion} selected`)
+  else tips.push('Select your SDK version from the dropdown, or paste your package.json above to auto-detect it — this significantly improves SDK-specific findings')
 
   const score = (hasInit ? 1 : 0) + (hasEmbed ? 1 : 0) + (hasConfig ? 1 : 0)
   const pass = score >= 2
@@ -104,7 +108,7 @@ export default function Home() {
     if (!canAnalyze) return
     // Only check pasted/uploaded code — skip check for GitHub URL
     if (code.trim() && !githubUrl.trim()) {
-      const score = scoreCode(code)
+      const score = scoreCode(code, sdkVersion)
       if (!score.pass) {
         setCodeWarning(score)
         return
@@ -351,9 +355,9 @@ export default function Home() {
               {!canAnalyze && !loading && (
                 <div className="space-y-1.5">
                   {[
-                    { done: !hasNoApiKey,   label: 'Set your Anthropic API key in Settings' },
-                    { done: !hasNoCode,     label: 'Add your embed code (paste, upload, or GitHub URL)' },
-                    { done: !hasNoVersions, label: 'Select from and to cluster versions' },
+                    { done: !hasNoApiKey,   label: 'Set your Anthropic API key in Settings', blocking: true },
+                    { done: !hasNoCode,     label: 'Add your embed code (paste, upload, or GitHub URL)', blocking: true },
+                    { done: !hasNoVersions, label: 'Select from and to cluster versions', blocking: true },
                   ].map((item, i) => (
                     <div key={i} className={`flex items-center gap-2 text-xs ${item.done ? 'line-through' : ''}`}
                          style={{ color: item.done ? '#3A5572' : '#7AA8C4' }}>
@@ -361,6 +365,13 @@ export default function Home() {
                       {item.label}
                     </div>
                   ))}
+                </div>
+              )}
+              {canAnalyze && !loading && !sdkVersion && (
+                <div className="flex items-center gap-2 text-xs"
+                     style={{ color: '#FFC052' }}>
+                  <div className="w-1.5 h-1.5 rounded-full shrink-0 bg-[#FFC052]" />
+                  SDK version unknown — select it below or paste your package.json to auto-detect. Analysis will be less precise without it.
                 </div>
               )}
             </div>

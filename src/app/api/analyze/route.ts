@@ -102,14 +102,14 @@ Return your analysis as a JSON object with this exact structure:
       "detail": "Detailed explanation of what this means for their specific code",
       "affectedCode": "The exact property/function/variable in their code that is affected",
       "fix": "Exact code change or action required",
-      "docsLink": "Relevant docs URL if known"
+      "docsLink": ""
     }
   ],
   "opportunities": [
     {
       "title": "New feature they could benefit from",
       "detail": "Why it's relevant to their implementation",
-      "docsLink": "URL"
+      "docsLink": ""
     }
   ]
 }

@@ -1,13 +1,12 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { Settings, Zap, AlertCircle, Loader2, Edit2 } from 'lucide-react'
+import { Settings, Zap, AlertCircle, Loader2, Edit2, AlertTriangle } from 'lucide-react'
 import SettingsPanel from '@/components/SettingsPanel'
 import CodeInput from '@/components/CodeInput'
 import VersionSelector from '@/components/VersionSelector'
 import AnalysisResults from '@/components/AnalysisResults'
 import { SDK_VERSIONS } from '@/lib/versions'
 
-// Fix: check for instantiation (new XEmbed) not just import mentions
 function detectEmbedType(code: string): string | null {
   if (/new\s+AppEmbed\s*\(/.test(code)) return 'AppEmbed'
   if (/new\s+LiveboardEmbed\s*\(/.test(code)) return 'LiveboardEmbed'
@@ -15,6 +14,53 @@ function detectEmbedType(code: string): string | null {
   if (/new\s+SearchEmbed\s*\(/.test(code)) return 'SearchEmbed'
   if (/new\s+SageEmbed\s*\(/.test(code)) return 'SageEmbed'
   return null
+}
+
+interface CodeScore {
+  pass: boolean
+  detected: string[]
+  missing: string[]
+  tips: string[]
+}
+
+function scoreCode(code: string): CodeScore {
+  const detected: string[] = []
+  const missing: string[] = []
+  const tips: string[] = []
+
+  const hasInit = /init\s*\(/.test(code)
+  const hasEmbed = /new\s+(AppEmbed|LiveboardEmbed|SpotterEmbed|SearchEmbed|SageEmbed)\s*\(/.test(code)
+  const hasConfig = /authType\s*:|customizations\s*:|frameParams\s*:|liveboardId\s*:|pageId\s*:/.test(code)
+  const hasCSS = /--ts-var-/.test(code)
+  const hasActions = /Action\.|disabledActions|visibleActions|hiddenActions/.test(code)
+  const isOnlyPackageJson = code.includes('"dependencies"') && !hasInit && !hasEmbed
+
+  if (isOnlyPackageJson) {
+    detected.push('package.json (SDK version detected)')
+    missing.push('Embed initialisation code')
+    tips.push('Add your embed file — the one containing init() and your component setup')
+    tips.push('The SDK version has been detected but without embed code the analysis will be generic')
+    return { pass: false, detected, missing, tips }
+  }
+
+  if (hasInit) detected.push('init() call found')
+  else { missing.push('init() call'); tips.push('Include your ThoughtSpot init() configuration — authType, thoughtSpotHost, customizations') }
+
+  if (hasEmbed) detected.push('Embed component instantiation found')
+  else { missing.push('Embed component (AppEmbed, LiveboardEmbed etc)'); tips.push('Include the file where you instantiate your embed component with new LiveboardEmbed() or similar') }
+
+  if (hasConfig) detected.push('Config properties found')
+  else tips.push('Include component config options (liveboardId, frameParams, authType etc) for more specific findings')
+
+  if (hasCSS) detected.push('CSS variables found — white-label analysis will be included')
+  else tips.push('If you use custom CSS variables (--ts-var-*), include them for CSS impact analysis')
+
+  if (hasActions) detected.push('Action enum usage found')
+
+  const score = (hasInit ? 1 : 0) + (hasEmbed ? 1 : 0) + (hasConfig ? 1 : 0)
+  const pass = score >= 2
+
+  return { pass, detected, missing, tips }
 }
 
 export default function Home() {
@@ -33,6 +79,7 @@ export default function Home() {
   const [emailDraft, setEmailDraft] = useState<{ subject: string; body: string } | null>(null)
   const [emailError, setEmailError] = useState<string | null>(null)
   const [showHomeConfirm, setShowHomeConfirm] = useState(false)
+  const [codeWarning, setCodeWarning] = useState<CodeScore | null>(null)
 
   useEffect(() => {
     const stored = localStorage.getItem('ts_advisor_api_key')
@@ -42,10 +89,7 @@ export default function Home() {
   const canAnalyze = (code.trim() || githubUrl.trim()) && fromVersion && toVersion && apiKey
 
   const handleLogoClick = () => {
-    if (analysis || emailDraft) {
-      setShowHomeConfirm(true)
-    }
-    // If no results, nothing to warn about — logo is just decorative
+    if (analysis || emailDraft) setShowHomeConfirm(true)
   }
 
   const handleHomeConfirm = () => {
@@ -56,8 +100,21 @@ export default function Home() {
     setShowHomeConfirm(false)
   }
 
-  const handleAnalyze = async () => {
+  const handleAnalyzeClick = () => {
     if (!canAnalyze) return
+    // Only check pasted/uploaded code — skip check for GitHub URL
+    if (code.trim() && !githubUrl.trim()) {
+      const score = scoreCode(code)
+      if (!score.pass) {
+        setCodeWarning(score)
+        return
+      }
+    }
+    runAnalysis()
+  }
+
+  const runAnalysis = async () => {
+    setCodeWarning(null)
     setLoading(true)
     setError(null)
     setAnalysis(null)
@@ -128,6 +185,67 @@ export default function Home() {
                 className="flex-1 py-2.5 rounded-lg text-sm"
                 style={{ border: '1px solid rgba(4,209,255,0.2)', color: '#7AA8C4' }}>
                 Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Code quality warning modal */}
+      {codeWarning && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 backdrop-blur-sm" style={{ background: 'rgba(8,6,43,0.85)' }}
+               onClick={() => setCodeWarning(null)} />
+          <div className="relative ts-card p-6 max-w-md mx-4 animate-fadeIn"
+               style={{ boxShadow: '0 20px 60px rgba(0,0,0,0.5)', border: '1px solid rgba(255,192,82,0.2)' }}>
+            <div className="flex items-start gap-3 mb-4">
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+                   style={{ background: 'rgba(255,192,82,0.15)', border: '1px solid rgba(255,192,82,0.25)' }}>
+                <AlertTriangle size={15} style={{ color: '#FFC052' }} />
+              </div>
+              <div>
+                <h3 className="text-base font-semibold text-white">Your code looks minimal</h3>
+                <p className="text-xs mt-1" style={{ color: '#7AA8C4' }}>
+                  The analysis will be less specific than it could be. For best results, include your full embed implementation.
+                </p>
+              </div>
+            </div>
+
+            {codeWarning.detected.length > 0 && (
+              <div className="mb-3">
+                <p className="text-xs font-medium mb-1.5" style={{ color: '#6DD267' }}>What we found:</p>
+                <ul className="space-y-1">
+                  {codeWarning.detected.map((d, i) => (
+                    <li key={i} className="text-xs flex items-start gap-2" style={{ color: '#7AA8C4' }}>
+                      <span style={{ color: '#6DD267' }}>✓</span> {d}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {codeWarning.tips.length > 0 && (
+              <div className="rounded-lg p-3 mb-4 space-y-1.5"
+                   style={{ background: 'rgba(255,192,82,0.06)', border: '1px solid rgba(255,192,82,0.15)' }}>
+                <p className="text-xs font-medium" style={{ color: '#FFC052' }}>To improve your analysis, add:</p>
+                {codeWarning.tips.map((tip, i) => (
+                  <p key={i} className="text-xs flex items-start gap-2" style={{ color: '#7AA8C4' }}>
+                    <span style={{ color: '#FFC052', marginTop: 1 }}>·</span> {tip}
+                  </p>
+                ))}
+              </div>
+            )}
+
+            <div className="flex gap-3">
+              <button onClick={() => setCodeWarning(null)}
+                className="flex-1 py-2.5 rounded-lg text-sm font-medium text-white"
+                style={{ background: 'linear-gradient(135deg, #04D1FF, #714BFB)' }}>
+                Improve my code
+              </button>
+              <button onClick={runAnalysis}
+                className="flex-1 py-2.5 rounded-lg text-sm transition-colors"
+                style={{ border: '1px solid rgba(255,255,255,0.1)', color: '#7AA8C4' }}>
+                Analyse anyway
               </button>
             </div>
           </div>
@@ -221,7 +339,7 @@ export default function Home() {
               onFromChange={setFromVersion} onToChange={setToVersion} onSdkChange={setSdkVersion} />
 
             <div className="space-y-3">
-              <button onClick={handleAnalyze} disabled={!canAnalyze || loading}
+              <button onClick={handleAnalyzeClick} disabled={!canAnalyze || loading}
                 className="w-full py-3.5 rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-2"
                 style={canAnalyze && !loading
                   ? { background: 'linear-gradient(135deg, #04D1FF, #714BFB)', color: 'white', boxShadow: '0 0 20px rgba(4,209,255,0.2)' }
@@ -366,5 +484,3 @@ function EmailDraftCard({ email, onRegenerate, emailLoading }: { email: { subjec
     </div>
   )
 }
-
-// Note: Footer is appended separately — see layout or add inline below main

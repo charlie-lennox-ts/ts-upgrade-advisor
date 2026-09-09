@@ -2,6 +2,7 @@
 // from live ThoughtSpot documentation, never from hardcoded mappings.
 
 export const CLUSTER_VERSIONS = [
+  { value: '26.9.0.cl',  label: '26.9.0.cl' },
   { value: '26.8.0.cl',  label: '26.8.0.cl' },
   { value: '26.7.0.cl',  label: '26.7.0.cl' },
   { value: '26.6.0.cl',  label: '26.6.0.cl' },

@@ -1,0 +1,42 @@
+name: Scrape Preview Docs
+
+on:
+  schedule:
+    # Runs every night at midnight UTC
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+    # Allow manual trigger from GitHub Actions UI
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Playwright
+        run: |
+          npm install playwright @playwright/test
+          npx playwright install chromium --with-deps
+
+      - name: Run scraper
+        env:
+          PREVIEW_DOCS_EMAIL: ${{ secrets.PREVIEW_DOCS_EMAIL }}
+          PREVIEW_DOCS_PASSWORD: ${{ secrets.PREVIEW_DOCS_PASSWORD }}
+        run: node scripts/scrape-preview-docs.js
+
+      - name: Commit updated preview notes
+        run: |
+          git config --global user.name "Preview Docs Bot"
+          git config --global user.email "bot@ts-upgrade-advisor"
+          git add src/data/preview-release-notes.json
+          git diff --staged --quiet || git commit -m "chore: update preview release notes [skip ci]"
+          git push

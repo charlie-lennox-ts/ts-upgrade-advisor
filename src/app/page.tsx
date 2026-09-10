@@ -79,6 +79,8 @@ export default function Home() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [analysis, setAnalysis] = useState<any>(null)
+  const [usedPreviewNotes, setUsedPreviewNotes] = useState(false)
+  const [previewVersion, setPreviewVersion] = useState<string | null>(null)
   const [emailLoading, setEmailLoading] = useState(false)
   const [emailDraft, setEmailDraft] = useState<{ subject: string; body: string } | null>(null)
   const [emailError, setEmailError] = useState<string | null>(null)
@@ -101,12 +103,13 @@ export default function Home() {
     setEmailDraft(null)
     setInputsCollapsed(false)
     setError(null)
+    setUsedPreviewNotes(false)
+    setPreviewVersion(null)
     setShowHomeConfirm(false)
   }
 
   const handleAnalyzeClick = () => {
     if (!canAnalyze) return
-    // Only check pasted/uploaded code — skip check for GitHub URL
     if (code.trim() && !githubUrl.trim()) {
       const score = scoreCode(code, sdkVersion)
       if (!score.pass) {
@@ -123,6 +126,8 @@ export default function Home() {
     setError(null)
     setAnalysis(null)
     setEmailDraft(null)
+    setUsedPreviewNotes(false)
+    setPreviewVersion(null)
     try {
       const res = await fetch('/api/analyze', {
         method: 'POST',
@@ -132,6 +137,8 @@ export default function Home() {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Analysis failed')
       setAnalysis(data.analysis)
+      setUsedPreviewNotes(data.usedPreviewNotes === true)
+      setPreviewVersion(data.previewVersion || null)
       setInputsCollapsed(true)
     } catch (e) {
       setError((e as Error).message)
@@ -214,7 +221,6 @@ export default function Home() {
                 </p>
               </div>
             </div>
-
             {codeWarning.detected.length > 0 && (
               <div className="mb-3">
                 <p className="text-xs font-medium mb-1.5" style={{ color: '#6DD267' }}>What we found:</p>
@@ -227,7 +233,6 @@ export default function Home() {
                 </ul>
               </div>
             )}
-
             {codeWarning.tips.length > 0 && (
               <div className="rounded-lg p-3 mb-4 space-y-1.5"
                    style={{ background: 'rgba(255,192,82,0.06)', border: '1px solid rgba(255,192,82,0.15)' }}>
@@ -239,7 +244,6 @@ export default function Home() {
                 ))}
               </div>
             )}
-
             <div className="flex gap-3">
               <button onClick={() => setCodeWarning(null)}
                 className="flex-1 py-2.5 rounded-lg text-sm font-medium text-white"
@@ -355,9 +359,9 @@ export default function Home() {
               {!canAnalyze && !loading && (
                 <div className="space-y-1.5">
                   {[
-                    { done: !hasNoApiKey,   label: 'Set your Anthropic API key in Settings', blocking: true },
-                    { done: !hasNoCode,     label: 'Add your embed code (paste, upload, or GitHub URL)', blocking: true },
-                    { done: !hasNoVersions, label: 'Select from and to cluster versions', blocking: true },
+                    { done: !hasNoApiKey,   label: 'Set your Anthropic API key in Settings' },
+                    { done: !hasNoCode,     label: 'Add your embed code (paste, upload, or GitHub URL)' },
+                    { done: !hasNoVersions, label: 'Select from and to cluster versions' },
                   ].map((item, i) => (
                     <div key={i} className={`flex items-center gap-2 text-xs ${item.done ? 'line-through' : ''}`}
                          style={{ color: item.done ? '#3A5572' : '#7AA8C4' }}>
@@ -368,8 +372,7 @@ export default function Home() {
                 </div>
               )}
               {canAnalyze && !loading && !sdkVersion && (
-                <div className="flex items-center gap-2 text-xs"
-                     style={{ color: '#FFC052' }}>
+                <div className="flex items-center gap-2 text-xs" style={{ color: '#FFC052' }}>
                   <div className="w-1.5 h-1.5 rounded-full shrink-0 bg-[#FFC052]" />
                   SDK version unknown — select it below or paste your package.json to auto-detect. Analysis will be less precise without it.
                 </div>
@@ -405,6 +408,22 @@ export default function Home() {
                 <div key={i} className="w-1.5 h-1.5 rounded-full animate-bounce"
                      style={{ background: '#04D1FF', animationDelay: `${i * 0.15}s` }} />
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* Preview notes disclaimer banner */}
+        {analysis && !loading && usedPreviewNotes && previewVersion && (
+          <div className="flex items-start gap-3 rounded-xl px-4 py-3 animate-fadeIn"
+               style={{ background: 'rgba(113,75,251,0.08)', border: '1px solid rgba(113,75,251,0.25)' }}>
+            <AlertTriangle size={15} className="shrink-0 mt-0.5" style={{ color: '#A78BFA' }} />
+            <div>
+              <p className="text-sm font-medium" style={{ color: '#A78BFA' }}>
+                This analysis includes draft preview content for {previewVersion}
+              </p>
+              <p className="text-xs mt-0.5 leading-relaxed" style={{ color: '#7AA8C4' }}>
+                Some findings are based on pre-release documentation that is not yet publicly available and may change before general availability. Verify these findings against the official release notes before taking action.
+              </p>
             </div>
           </div>
         )}

@@ -8,8 +8,7 @@ interface VersionSelectorProps {
   onFromChange: (v: string) => void; onToChange: (v: string) => void; onSdkChange: (v: string) => void
 }
 
-function isNewerVersion(a: string, b: string): boolean {
-  // Returns true if a is newer than b
+function isNewerCluster(a: string, b: string): boolean {
   const parse = (v: string) => v.replace('.cl', '').split('.').map(Number)
   const [aMaj, aMin] = parse(a)
   const [bMaj, bMin] = parse(b)
@@ -17,30 +16,50 @@ function isNewerVersion(a: string, b: string): boolean {
   return aMin > bMin
 }
 
+function isNewerSdk(a: string, b: string): boolean {
+  const parseMinor = (v: string) => parseFloat(v.replace('1.', '').replace('.x', '.0').replace(/^(\d+)\..*/, '$1'))
+  return parseMinor(a) > parseMinor(b)
+}
+
 export default function VersionSelector({ fromVersion, toVersion, sdkVersion, onFromChange, onToChange, onSdkChange }: VersionSelectorProps) {
-  const [versions, setVersions] = useState(CLUSTER_VERSIONS)
-  const [newVersionFound, setNewVersionFound] = useState<string | null>(null)
+  const [clusterVersions, setClusterVersions] = useState(CLUSTER_VERSIONS)
+  const [sdkVersions, setSdkVersions] = useState(SDK_VERSIONS)
+  const [newClusterFound, setNewClusterFound] = useState<string | null>(null)
+  const [newSdkFound, setNewSdkFound] = useState<string | null>(null)
 
   useEffect(() => {
-    // Fetch latest version from ThoughtSpot docs on mount
+    // Auto-detect latest cluster version
     fetch('/api/latest-version')
       .then(r => r.json())
       .then(data => {
         if (!data.latest) return
         const currentLatest = CLUSTER_VERSIONS[0].value
-        if (isNewerVersion(data.latest, currentLatest)) {
-          setNewVersionFound(data.latest)
-          setVersions([
+        if (isNewerCluster(data.latest, currentLatest)) {
+          setNewClusterFound(data.latest)
+          setClusterVersions([
             { value: data.latest, label: `${data.latest} ✦ New` },
             ...CLUSTER_VERSIONS
           ])
         }
       })
-      .catch(() => {}) // silently fail — hardcoded list is the fallback
+      .catch(() => {})
+
+    // Auto-detect latest SDK version
+    fetch('/api/latest-sdk-version')
+      .then(r => r.json())
+      .then(data => {
+        if (!data.latest) return
+        const currentLatest = SDK_VERSIONS[0]
+        if (isNewerSdk(data.latest, currentLatest)) {
+          setNewSdkFound(data.latest)
+          setSdkVersions([data.latest + ' ✦ New', ...SDK_VERSIONS])
+        }
+      })
+      .catch(() => {})
   }, [])
 
-  const fromIdx = versions.findIndex(v => v.value === fromVersion)
-  const toIdx   = versions.findIndex(v => v.value === toVersion)
+  const fromIdx = clusterVersions.findIndex(v => v.value === fromVersion)
+  const toIdx   = clusterVersions.findIndex(v => v.value === toVersion)
   const versionSpan = fromIdx !== -1 && toIdx !== -1 ? fromIdx - toIdx : 0
   const bigJump = versionSpan > 4
 
@@ -62,11 +81,11 @@ export default function VersionSelector({ fromVersion, toVersion, sdkVersion, on
     <div className="ts-card p-5 space-y-5">
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-semibold text-white">Upgrade Path</h2>
-        {newVersionFound && (
+        {(newClusterFound || newSdkFound) && (
           <div className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full"
                style={{ background: 'rgba(109,210,103,0.1)', border: '1px solid rgba(109,210,103,0.2)', color: '#6DD267' }}>
             <RefreshCw size={10} />
-            {newVersionFound} detected from live docs
+            {[newClusterFound, newSdkFound].filter(Boolean).join(' · ')} detected
           </div>
         )}
       </div>
@@ -76,7 +95,7 @@ export default function VersionSelector({ fromVersion, toVersion, sdkVersion, on
           <label style={labelStyle}>From cluster version</label>
           <select value={fromVersion} onChange={e => onFromChange(e.target.value)} style={selectStyle}>
             <option value="">Select version</option>
-            {versions.map(v => <option key={v.value} value={v.value}>{v.label}</option>)}
+            {clusterVersions.map(v => <option key={v.value} value={v.value}>{v.label}</option>)}
           </select>
         </div>
         <div style={{ paddingTop: '20px' }}>
@@ -86,7 +105,7 @@ export default function VersionSelector({ fromVersion, toVersion, sdkVersion, on
           <label style={labelStyle}>To cluster version</label>
           <select value={toVersion} onChange={e => onToChange(e.target.value)} style={selectStyle}>
             <option value="">Select version</option>
-            {versions.map(v => <option key={v.value} value={v.value}>{v.label}</option>)}
+            {clusterVersions.map(v => <option key={v.value} value={v.value}>{v.label}</option>)}
           </select>
         </div>
       </div>
@@ -105,7 +124,7 @@ export default function VersionSelector({ fromVersion, toVersion, sdkVersion, on
         </label>
         <select value={sdkVersion} onChange={e => onSdkChange(e.target.value)} style={selectStyle}>
           <option value="">Unknown / not sure</option>
-          {SDK_VERSIONS.map(v => <option key={v} value={v}>v{v}</option>)}
+          {sdkVersions.map(v => <option key={v} value={v}>v{v}</option>)}
         </select>
         <p className="text-xs mt-2" style={{ color: '#3A5572' }}>
           SDK version recommendations are sourced from live ThoughtSpot documentation during analysis — not from this tool.

@@ -1,6 +1,3 @@
-// SDK recommended versions intentionally removed — we only surface SDK guidance
-// from live ThoughtSpot documentation, never from hardcoded mappings.
-
 export const CLUSTER_VERSIONS = [
   { value: '26.9.0.cl',  label: '26.9.0.cl' },
   { value: '26.8.0.cl',  label: '26.8.0.cl' },
@@ -27,7 +24,9 @@ export const CLUSTER_VERSIONS = [
   { value: '9.12.5.cl',  label: '9.12.5.cl'  },
 ]
 
+// Updated to include 1.50, 1.51, 1.52
 export const SDK_VERSIONS = [
+  '1.52.x', '1.51.x', '1.50.x',
   '1.49.0', '1.48.0', '1.47.0', '1.46.x', '1.45.0', '1.44.x', '1.43.0',
   '1.42.0', '1.41.0', '1.40.0', '1.39.0', '1.38.0', '1.37.0', '1.36.0',
   '1.35.0', '1.34.0', '1.33.x', '1.32.x', '1.31.x', '1.30.0', '1.29.0',

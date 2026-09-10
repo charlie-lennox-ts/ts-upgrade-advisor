@@ -13,76 +13,71 @@ async function scrape() {
   const page = await browser.newPage();
 
   try {
-    // Step 1: Go to the home page which redirects to Auth0
+    // Step 1: Go to home page
     console.log('Navigating to preview docs...');
     await page.goto(`${BASE_URL}/home`, { waitUntil: 'networkidle' });
 
-    // Step 2: Click Log In
-    await page.click('text=Log in');
-    await page.waitForURL(/auth0\.com/);
+    // Step 2: Click Log In button
+    await page.click('a:has-text("Log in"), button:has-text("Log in"), a:has-text("Log In"), button:has-text("Log In")');
+    await page.waitForURL(/auth0\.com/, { timeout: 15000 });
+    console.log('On Auth0 login page');
 
-    // Step 3: Fill in Auth0 form
-    console.log('Authenticating...');
-    await page.fill('input[type="email"], input[name="email"], input[placeholder*="example"]', EMAIL);
-    await page.fill('input[type="password"], input[name="password"], input[placeholder*="password"]', PASSWORD);
+    // Step 3: Fill email
+    await page.waitForSelector('input[type="email"], input[name="email"]', { timeout: 10000 });
+    await page.fill('input[type="email"], input[name="email"]', EMAIL);
 
-    // Check the terms of service checkbox if present
-    const termsCheckbox = page.locator('input[type="checkbox"]');
-    if (await termsCheckbox.isVisible()) {
-      await termsCheckbox.check();
-    }
+    // Step 4: Fill password
+    await page.fill('input[type="password"], input[name="password"]', PASSWORD);
 
-    // Click log in
-    await page.click('text=LOG IN, button[type="submit"]');
-    await page.waitForURL(/preview-docs\.thoughtspot\.com/, { timeout: 15000 });
-    console.log('Authenticated successfully');
-
-    // Step 4: Detect the latest preview version from the page
-    const currentUrl = page.url();
-    let version = null;
-
-    // Try to find version in URL or page content
-    const versionMatch = currentUrl.match(/cloud\/([\d.]+\.cl)/);
-    if (versionMatch) {
-      version = versionMatch[1];
-    } else {
-      // Navigate to latest and detect version
-      await page.goto(`${BASE_URL}/cloud/latest/notes`, { waitUntil: 'networkidle' });
-      const finalUrl = page.url();
-      const urlMatch = finalUrl.match(/cloud\/([\d.]+\.cl)/);
-      if (urlMatch) version = urlMatch[1];
-    }
-
-    console.log(`Detected preview version: ${version}`);
-
-    // Step 5: Fetch the main release notes page
-    await page.goto(`${BASE_URL}/cloud/latest/notes`, { waitUntil: 'networkidle' });
-    const releaseNotesContent = await page.evaluate(() => document.body.innerText);
-
-    // Step 6: Fetch the developer embedded what's new if available
-    let embeddedContent = '';
+    // Step 5: Check terms checkbox if visible
     try {
-      await page.goto(`${BASE_URL}/cloud/latest/notes#developer`, { waitUntil: 'networkidle' });
-      embeddedContent = await page.evaluate(() => document.body.innerText);
-    } catch {
-      console.log('No separate embedded section found');
-    }
+      const checkbox = page.locator('input[type="checkbox"]').first();
+      if (await checkbox.isVisible({ timeout: 2000 })) {
+        await checkbox.check();
+        console.log('Checked terms checkbox');
+      }
+    } catch { /* no checkbox */ }
 
-    // Step 7: Write output
+    // Step 6: Submit — try multiple selectors
+    await Promise.race([
+      page.click('button[type="submit"]'),
+      page.click('button:has-text("LOG IN")'),
+      page.click('button:has-text("Log In")'),
+    ]);
+
+    await page.waitForURL(/preview-docs\.thoughtspot\.com/, { timeout: 20000 });
+    console.log('Authenticated successfully, URL:', page.url());
+
+    // Step 7: Detect version from URL
+    await page.goto(`${BASE_URL}/cloud/latest/notes`, { waitUntil: 'networkidle' });
+    const finalUrl = page.url();
+    const versionMatch = finalUrl.match(/cloud\/([\d.]+\.cl)/);
+    const version = versionMatch ? versionMatch[1] : 'unknown';
+    console.log(`Preview version: ${version}`);
+
+    // Step 8: Get release notes content
+    const releaseNotesContent = await page.evaluate(() => document.body.innerText);
+    console.log(`Release notes length: ${releaseNotesContent.length} chars`);
+
+    // Step 9: Write output
     const output = {
-      version: version || 'unknown',
+      version,
       scrapedAt: new Date().toISOString(),
       isDraft: true,
       releaseNotes: releaseNotesContent.substring(0, 30000),
-      embeddedNotes: embeddedContent.substring(0, 10000),
+      embeddedNotes: '',
     };
 
     fs.writeFileSync(OUTPUT_PATH, JSON.stringify(output, null, 2));
-    console.log(`Preview notes saved to ${OUTPUT_PATH}`);
-    console.log(`Version: ${output.version}, Length: ${output.releaseNotes.length} chars`);
+    console.log(`Saved to ${OUTPUT_PATH}`);
 
   } catch (error) {
     console.error('Scraper failed:', error.message);
+    // Take a screenshot for debugging
+    try {
+      await page.screenshot({ path: '/tmp/scraper-error.png' });
+      console.log('Screenshot saved to /tmp/scraper-error.png');
+    } catch {}
     process.exit(1);
   } finally {
     await browser.close();

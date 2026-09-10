@@ -29,11 +29,11 @@ function loadPreviewNotes(): { content: string; version: string | null; isDraft:
     const filePath = join(process.cwd(), 'src/data/preview-release-notes.json')
     const raw = readFileSync(filePath, 'utf-8')
     const data = JSON.parse(raw)
-    if (!data.releaseNotes || data.releaseNotes.length < 100) {
+    if (!data.releaseNotes || data.releaseNotes.length < 500) {
       return { content: '', version: null, isDraft: false }
     }
     return {
-      content: `${data.releaseNotes}\n${data.embeddedNotes}`.substring(0, 30000),
+      content: `${data.releaseNotes}\n${data.embeddedNotes || ''}`.substring(0, 30000),
       version: data.version,
       isDraft: data.isDraft === true,
     }
@@ -74,59 +74,92 @@ export async function POST(req: NextRequest) {
       Promise.resolve(loadPreviewNotes()),
     ])
 
-    const hasPreviewNotes = previewNotes.content.length > 100
+    const hasPreviewNotes = previewNotes.content.length > 500
 
-    const systemPrompt = `You are an expert ThoughtSpot Embedded (TSE) upgrade advisor.
-Analyze the customer's embed code and identify exactly what will be impacted when they upgrade.
+    const systemPrompt = `You are an expert ThoughtSpot Embedded (TSE) upgrade advisor with deep knowledge of every version of the Visual Embed SDK and ThoughtSpot Cloud releases.
 
-Only flag things that are ACTUALLY in the customer's code. Do not flag placeholder values, empty arrays, or template comments.
-If the upgrade is low risk, say so clearly and keep the issues list short.
+Your job is to produce a THOROUGH and COMPLETE analysis of everything that may impact this customer's embed implementation when upgrading between the specified cluster versions.
 
-${hasPreviewNotes ? `PREVIEW NOTES AVAILABLE: Some documentation below includes DRAFT release notes for ${previewNotes.version} — not yet public, subject to change before GA. If your analysis uses these, set "usedPreviewNotes" to true.` : ''}
+ANALYSIS REQUIREMENTS — be exhaustive, not minimal:
+- Scan every property, method, event, CSS variable, Action enum, HostEvent, EmbedEvent, and configuration option in the customer's code
+- Flag ALL of the following that appear in their code:
+  * Deprecated properties or methods (even if still functional — customers need to plan ahead)
+  * Removed or breaking changes
+  * Properties whose behaviour has changed between versions
+  * CSS variables that have been renamed, removed, or whose scope has changed
+  * Action enum values that have been removed or renamed
+  * EmbedEvent or HostEvent values that have changed
+  * SDK version gaps — if their SDK is behind the recommended version for the target cluster
+  * Navigation patterns that have changed (e.g. path changes, Page enum additions)
+  * Auth patterns that may be affected
+- Also surface new features introduced in the version range that are DIRECTLY relevant to the embed components and patterns they are already using — these are opportunities, not issues
+- Do NOT invent issues that aren't supported by the documentation
+- Do NOT pad with generic advice unrelated to their specific code
+- If the upgrade is genuinely low risk, say so — but still list every minor consideration
+
+${hasPreviewNotes ? `
+IMPORTANT — SOURCE HIERARCHY:
+You have two sets of documentation:
+1. PUBLIC DOCS (SDK Changelog + What's New) — these are the authoritative source of truth. Always prioritise these.
+2. PREVIEW/DRAFT NOTES (${previewNotes.version}) — these are pre-release and may change before GA. Use them to surface upcoming changes the customer should be aware of, but if anything in the preview notes contradicts the public docs, the public docs take precedence.
+
+For any issue that comes ONLY from the preview notes (not confirmed in public docs), set "fromPreviewNotes": true on that issue. This flags it as draft content subject to change.
+` : ''}
 
 Return ONLY a raw JSON object starting with { and ending with }:
 {
-  "summary": "2-3 sentence summary",
-  "sdkVersionWarning": null,
+  "summary": "2-3 sentence summary covering the overall risk level and most important findings",
+  "sdkVersionWarning": "string if SDK is behind recommended, otherwise null",
   "usedPreviewNotes": false,
   "issues": [{
-    "id": "unique-id",
+    "id": "unique-kebab-case-id",
     "severity": "critical|warning|info",
     "category": "breaking-change|deprecation|css-variable|new-feature|sdk-version",
-    "title": "Short title",
-    "detail": "Detailed explanation",
-    "affectedCode": "exact property/variable affected",
-    "fix": "exact action required",
-    "docsLink": ""
+    "title": "Short descriptive title",
+    "detail": "Detailed explanation of what this means for their specific code and why it matters",
+    "affectedCode": "The exact property, function, or variable from their code",
+    "fix": "Specific action required — exact code change if possible",
+    "docsLink": "",
+    "fromPreviewNotes": false
   }],
   "opportunities": [{
-    "title": "feature title",
-    "detail": "why relevant",
-    "docsLink": ""
+    "title": "Feature title",
+    "detail": "Why this is relevant to their specific implementation",
+    "docsLink": "",
+    "fromPreviewNotes": false
   }]
 }`
 
-    const userPrompt = `EMBED CODE:
+    const userPrompt = `Analyse this ThoughtSpot embed implementation for upgrade impact. Be thorough — surface every relevant finding.
+
+EMBED CODE:
 \`\`\`
 ${embedCode.substring(0, 15000)}
 \`\`\`
 
-UPGRADE: ${fromVersion} → ${toVersion}
-SDK: ${sdkVersion || 'unknown'}
+UPGRADE PATH: ${fromVersion} → ${toVersion}
+CURRENT SDK VERSION: ${sdkVersion || 'unknown — check package.json'}
 
-SDK CHANGELOG:
+=== PRIMARY SOURCE: SDK CHANGELOG (authoritative) ===
 ${changelog.substring(0, 20000)}
 
-WHAT'S NEW:
+=== PRIMARY SOURCE: WHAT'S NEW (authoritative) ===
 ${whatsNew.substring(0, 10000)}
 
-${hasPreviewNotes ? `DRAFT PREVIEW NOTES (${previewNotes.version} — not yet public):
-${previewNotes.content.substring(0, 15000)}` : ''}`
+${hasPreviewNotes ? `=== SUPPLEMENTARY SOURCE: DRAFT PREVIEW NOTES for ${previewNotes.version} (not yet public — use to supplement, public docs take priority if any conflict) ===
+${previewNotes.content.substring(0, 15000)}` : ''}
+
+Go through the embed code line by line and check every property, event, action, CSS variable, and pattern against all documentation sources. Surface everything relevant — breaking changes, deprecations, behavioural changes, CSS impacts, and new features the customer should know about.`
 
     const claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 4096, system: systemPrompt, messages: [{ role: 'user', content: userPrompt }] }),
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 4096,
+        system: systemPrompt,
+        messages: [{ role: 'user', content: userPrompt }]
+      }),
     })
 
     if (!claudeRes.ok) {
@@ -144,10 +177,14 @@ ${previewNotes.content.substring(0, 15000)}` : ''}`
       return NextResponse.json({ error: 'Failed to parse analysis. Please try again.', debug: rawText.substring(0, 300) }, { status: 500 })
     }
 
+    // Check if any issues came from preview notes
+    const anyPreviewUsed = analysis.issues?.some((i: any) => i.fromPreviewNotes) ||
+                           analysis.opportunities?.some((o: any) => o.fromPreviewNotes)
+
     return NextResponse.json({
       analysis,
       codeLength: embedCode.length,
-      usedPreviewNotes: hasPreviewNotes && analysis.usedPreviewNotes === true,
+      usedPreviewNotes: hasPreviewNotes && (analysis.usedPreviewNotes === true || anyPreviewUsed),
       previewVersion: hasPreviewNotes ? previewNotes.version : null,
     })
   } catch (err) {

@@ -412,22 +412,6 @@ export default function Home() {
           </div>
         )}
 
-        {/* Preview notes disclaimer banner */}
-        {analysis && !loading && usedPreviewNotes && previewVersion && (
-          <div className="flex items-start gap-3 rounded-xl px-4 py-3 animate-fadeIn"
-               style={{ background: 'rgba(113,75,251,0.08)', border: '1px solid rgba(113,75,251,0.25)' }}>
-            <AlertTriangle size={15} className="shrink-0 mt-0.5" style={{ color: '#A78BFA' }} />
-            <div>
-              <p className="text-sm font-medium" style={{ color: '#A78BFA' }}>
-                This analysis includes draft preview content for {previewVersion}
-              </p>
-              <p className="text-xs mt-0.5 leading-relaxed" style={{ color: '#7AA8C4' }}>
-                Some findings are based on pre-release documentation that is not yet publicly available and may change before general availability. Verify these findings against the official release notes before taking action.
-              </p>
-            </div>
-          </div>
-        )}
-
         {/* STEP 2 — Results */}
         {analysis && !loading && (
           <AnalysisResults analysis={analysis} fromVersion={fromVersion} toVersion={toVersion} />

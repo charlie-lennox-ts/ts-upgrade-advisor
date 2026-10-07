@@ -5,6 +5,10 @@ import { join } from 'path'
 const SDK_CHANGELOG_URL = 'https://developer-docs-26-3-0-cl.vercel.app/docs/embed-sdk-changelog'
 const WHATS_NEW_URL = 'https://developers.thoughtspot.com/docs/whats-new'
 
+// Preview/draft notes are currently disabled as a data source.
+// Scraper logic and scraped data remain intact — flip this to true to re-enable.
+const PREVIEW_NOTES_ENABLED = false
+
 async function fetchDoc(url: string): Promise<string> {
   try {
     const res = await fetch(url, { next: { revalidate: 3600 } })
@@ -25,6 +29,9 @@ async function fetchGitHubRaw(url: string): Promise<string> {
 }
 
 function loadPreviewNotes(): { content: string; version: string | null; isDraft: boolean } {
+  if (!PREVIEW_NOTES_ENABLED) {
+    return { content: '', version: null, isDraft: false }
+  }
   try {
     const filePath = join(process.cwd(), 'src/data/preview-release-notes.json')
     const raw = readFileSync(filePath, 'utf-8')
@@ -59,7 +66,6 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     const { code, fromVersion, toVersion, sdkVersion, githubUrl } = body
 
-    // API key now comes from server-side environment variable — never from the client
     const apiKey = process.env.ANTHROPIC_API_KEY
     if (!apiKey) {
       return NextResponse.json({ error: 'Server configuration error — API key not set' }, { status: 500 })

@@ -91,10 +91,6 @@ export default function HowItWorks() {
                 body: 'Your code is sent directly to Anthropic\'s API for analysis and is not written to any database, log, or storage by this service. Once the API call completes, it is gone.'
               },
               {
-                title: 'Your API key stays in your browser',
-                body: 'Your Anthropic API key is stored only in your browser\'s localStorage. It is sent to Anthropic\'s API as part of the request — this service never logs, stores, or has access to your key on the server side.'
-              },
-              {
                 title: 'Anthropic\'s API does not train on your data',
                 body: 'For API usage (as opposed to Claude.ai), Anthropic does not use your inputs or outputs to train their models by default. Your embed code and analysis are covered by Anthropic\'s API data policy.'
               },

@@ -57,9 +57,13 @@ function extractJSON(text: string): string {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
-    const { code, fromVersion, toVersion, sdkVersion, apiKey, githubUrl } = body
+    const { code, fromVersion, toVersion, sdkVersion, githubUrl } = body
 
-    if (!apiKey) return NextResponse.json({ error: 'API key required' }, { status: 400 })
+    // API key now comes from server-side environment variable — never from the client
+    const apiKey = process.env.ANTHROPIC_API_KEY
+    if (!apiKey) {
+      return NextResponse.json({ error: 'Server configuration error — API key not set' }, { status: 500 })
+    }
 
     let embedCode = code || ''
     if (githubUrl) {
@@ -177,7 +181,6 @@ Go through the embed code line by line and check every property, event, action, 
       return NextResponse.json({ error: 'Failed to parse analysis. Please try again.', debug: rawText.substring(0, 300) }, { status: 500 })
     }
 
-    // Check if any issues came from preview notes
     const anyPreviewUsed = analysis.issues?.some((i: any) => i.fromPreviewNotes) ||
                            analysis.opportunities?.some((o: any) => o.fromPreviewNotes)
 

@@ -1,7 +1,6 @@
 'use client'
-import { useState, useEffect } from 'react'
-import { Settings, Zap, AlertCircle, Loader2, Edit2, AlertTriangle } from 'lucide-react'
-import SettingsPanel from '@/components/SettingsPanel'
+import { useState } from 'react'
+import { Zap, AlertCircle, Loader2, Edit2, AlertTriangle } from 'lucide-react'
 import CodeInput from '@/components/CodeInput'
 import VersionSelector from '@/components/VersionSelector'
 import AnalysisResults from '@/components/AnalysisResults'
@@ -68,8 +67,6 @@ function scoreCode(code: string, sdkVersion: string): CodeScore {
 }
 
 export default function Home() {
-  const [settingsOpen, setSettingsOpen] = useState(false)
-  const [apiKey, setApiKey] = useState('')
   const [code, setCode] = useState('')
   const [githubUrl, setGithubUrl] = useState('')
   const [fromVersion, setFromVersion] = useState('')
@@ -87,12 +84,7 @@ export default function Home() {
   const [showHomeConfirm, setShowHomeConfirm] = useState(false)
   const [codeWarning, setCodeWarning] = useState<CodeScore | null>(null)
 
-  useEffect(() => {
-    const stored = localStorage.getItem('ts_advisor_api_key')
-    if (stored) setApiKey(stored)
-  }, [])
-
-  const canAnalyze = (code.trim() || githubUrl.trim()) && fromVersion && toVersion && apiKey
+  const canAnalyze = (code.trim() || githubUrl.trim()) && fromVersion && toVersion
 
   const handleLogoClick = () => {
     if (analysis || emailDraft) setShowHomeConfirm(true)
@@ -132,7 +124,7 @@ export default function Home() {
       const res = await fetch('/api/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code, githubUrl, fromVersion, toVersion, sdkVersion, apiKey }),
+        body: JSON.stringify({ code, githubUrl, fromVersion, toVersion, sdkVersion }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Analysis failed')
@@ -148,14 +140,14 @@ export default function Home() {
   }
 
   const handleGenerateEmail = async () => {
-    if (!analysis || !apiKey) return
+    if (!analysis) return
     setEmailLoading(true)
     setEmailError(null)
     try {
       const res = await fetch('/api/generate-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ analysis, fromVersion, toVersion, sdkVersion, apiKey }),
+        body: JSON.stringify({ analysis, fromVersion, toVersion, sdkVersion }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Email generation failed')
@@ -168,7 +160,6 @@ export default function Home() {
   }
 
   const embedType = detectEmbedType(code)
-  const hasNoApiKey = !apiKey
   const hasNoCode = !code.trim() && !githubUrl.trim()
   const hasNoVersions = !fromVersion || !toVersion
 
@@ -278,22 +269,6 @@ export default function Home() {
               <p className="text-xs" style={{ color: '#7AA8C4', marginTop: '-1px' }}>Understand your upgrade</p>
             </div>
           </button>
-          <div className="flex items-center gap-3">
-            <button onClick={() => setSettingsOpen(true)}
-              className="hidden sm:flex items-center gap-1.5 text-xs px-3 py-1 rounded-full border transition-all"
-              style={apiKey
-                ? { borderColor: 'rgba(109,210,103,0.3)', background: 'rgba(109,210,103,0.08)', color: '#6DD267' }
-                : { borderColor: 'rgba(255,192,82,0.4)', background: 'rgba(255,192,82,0.1)', color: '#FFC052' }
-              }>
-              <div className={`w-1.5 h-1.5 rounded-full ${apiKey ? 'bg-[#6DD267] animate-pulse' : 'bg-[#FFC052]'}`} />
-              {apiKey ? 'Connected' : 'Add API key'}
-            </button>
-            <button onClick={() => setSettingsOpen(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-colors"
-              style={{ border: '1px solid rgba(4,209,255,0.2)', color: '#7AA8C4' }}>
-              <Settings size={13} /> Settings
-            </button>
-          </div>
         </div>
       </header>
 
@@ -359,7 +334,6 @@ export default function Home() {
               {!canAnalyze && !loading && (
                 <div className="space-y-1.5">
                   {[
-                    { done: !hasNoApiKey,   label: 'Set your Anthropic API key in Settings' },
                     { done: !hasNoCode,     label: 'Add your embed code (paste, upload, or GitHub URL)' },
                     { done: !hasNoVersions, label: 'Select from and to cluster versions' },
                   ].map((item, i) => (
@@ -452,8 +426,6 @@ export default function Home() {
           How it works & privacy →
         </a>
       </footer>
-
-      <SettingsPanel isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} apiKey={apiKey} onApiKeyChange={setApiKey} />
     </div>
   )
 }

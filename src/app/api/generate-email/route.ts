@@ -2,9 +2,12 @@ import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(req: NextRequest) {
   try {
-    const { analysis, fromVersion, toVersion, sdkVersion, apiKey } = await req.json()
+    const { analysis, fromVersion, toVersion, sdkVersion } = await req.json()
 
-    if (!apiKey) return NextResponse.json({ error: 'API key required' }, { status: 400 })
+    const apiKey = process.env.ANTHROPIC_API_KEY
+    if (!apiKey) {
+      return NextResponse.json({ error: 'Server configuration error — API key not set' }, { status: 500 })
+    }
 
     const severityOrder: Record<string, number> = { critical: 0, warning: 1, info: 2 }
     const issuesList = analysis.issues

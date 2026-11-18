@@ -8,53 +8,59 @@ interface VersionSelectorProps {
   onFromChange: (v: string) => void; onToChange: (v: string) => void; onSdkChange: (v: string) => void
 }
 
-function isNewerCluster(a: string, b: string): boolean {
-  const parse = (v: string) => v.replace('.cl', '').split('.').map(Number)
-  const [aMaj, aMin] = parse(a)
-  const [bMaj, bMin] = parse(b)
-  if (aMaj !== bMaj) return aMaj > bMaj
-  return aMin > bMin
+const parseCluster = (v: string) => v.replace('.cl', '').split('.').map(n => parseInt(n, 10) || 0)
+// Newest-first comparator for cluster versions like 26.10.0.cl
+function compareCluster(a: string, b: string): number {
+  const [x, y] = [parseCluster(a), parseCluster(b)]
+  for (let i = 0; i < 3; i++) if ((x[i] || 0) !== (y[i] || 0)) return (y[i] || 0) - (x[i] || 0)
+  return 0
 }
-
-function isNewerSdk(a: string, b: string): boolean {
-  const parseMinor = (v: string) => parseFloat(v.replace('1.', '').replace('.x', '.0').replace(/^(\d+)\..*/, '$1'))
-  return parseMinor(a) > parseMinor(b)
-}
+// SDK versions are compared on their minor number (1.52.x, 1.52.0 -> 52)
+const sdkMinor = (v: string) => parseInt(v.split('.')[1], 10) || 0
 
 export default function VersionSelector({ fromVersion, toVersion, sdkVersion, onFromChange, onToChange, onSdkChange }: VersionSelectorProps) {
   const [clusterVersions, setClusterVersions] = useState(CLUSTER_VERSIONS)
-  const [sdkVersions, setSdkVersions] = useState(SDK_VERSIONS)
+  const [sdkVersions, setSdkVersions] = useState(SDK_VERSIONS.map(v => ({ value: v, label: `v${v}` })))
   const [newClusterFound, setNewClusterFound] = useState<string | null>(null)
   const [newSdkFound, setNewSdkFound] = useState<string | null>(null)
   const [showAllTo, setShowAllTo] = useState(false)
 
   useEffect(() => {
-    // Auto-detect latest cluster version
+    // Auto-detect cluster releases. Every release found in the docs that is missing from the
+    // known list is merged in (so none are skipped); only the newest one is flagged "New".
     fetch('/api/latest-version')
       .then(r => r.json())
       .then(data => {
-        if (!data.latest) return
-        const currentLatest = CLUSTER_VERSIONS[0].value
-        if (isNewerCluster(data.latest, currentLatest)) {
-          setNewClusterFound(data.latest)
-          setClusterVersions([
-            { value: data.latest, label: `${data.latest} ✦ New` },
-            ...CLUSTER_VERSIONS
-          ])
-        }
+        const found: string[] = data.all?.length ? data.all : data.latest ? [data.latest] : []
+        const known = new Set(CLUSTER_VERSIONS.map(v => v.value))
+        const missing = found.filter(v => !known.has(v))
+        if (missing.length === 0) return
+        const topKnown = CLUSTER_VERSIONS[0].value
+        const latest = [...found].sort(compareCluster)[0]
+        const merged = [...CLUSTER_VERSIONS, ...missing.map(v => ({ value: v, label: v }))]
+          .sort((a, b) => compareCluster(a.value, b.value))
+          .map(v => v.value === latest && compareCluster(latest, topKnown) < 0
+            ? { ...v, label: `${v.value} ✦ New` } : v)
+        setClusterVersions(merged)
+        if (compareCluster(latest, topKnown) < 0) setNewClusterFound(latest)
       })
       .catch(() => {})
 
-    // Auto-detect latest SDK version
+    // Auto-detect SDK releases, same approach
     fetch('/api/latest-sdk-version')
       .then(r => r.json())
       .then(data => {
-        if (!data.latest) return
-        const currentLatest = SDK_VERSIONS[0]
-        if (isNewerSdk(data.latest, currentLatest)) {
-          setNewSdkFound(data.latest)
-          setSdkVersions([data.latest + ' ✦ New', ...SDK_VERSIONS])
-        }
+        const found: string[] = data.all?.length ? data.all : data.latest ? [data.latest] : []
+        const knownMinors = new Set(SDK_VERSIONS.map(sdkMinor))
+        const missing = found.filter(v => !knownMinors.has(sdkMinor(v)))
+        if (missing.length === 0) return
+        const topKnown = sdkMinor(SDK_VERSIONS[0])
+        const latest = [...found].sort((a, b) => sdkMinor(b) - sdkMinor(a))[0]
+        const merged = [...SDK_VERSIONS, ...missing]
+          .sort((a, b) => sdkMinor(b) - sdkMinor(a))
+          .map(v => ({ value: v, label: v === latest && sdkMinor(latest) > topKnown ? `v${v} ✦ New` : `v${v}` }))
+        setSdkVersions(merged)
+        if (sdkMinor(latest) > topKnown) setNewSdkFound(latest)
       })
       .catch(() => {})
   }, [])
@@ -144,7 +150,7 @@ export default function VersionSelector({ fromVersion, toVersion, sdkVersion, on
         </label>
         <select value={sdkVersion} onChange={e => onSdkChange(e.target.value)} style={selectStyle}>
           <option value="">Unknown / not sure</option>
-          {sdkVersions.map(v => <option key={v} value={v}>v{v}</option>)}
+          {sdkVersions.map(v => <option key={v.value} value={v.value}>{v.label}</option>)}
         </select>
         <p className="text-xs mt-2" style={{ color: '#3A5572' }}>
           SDK version recommendations are sourced from live ThoughtSpot documentation during analysis — not from this tool.

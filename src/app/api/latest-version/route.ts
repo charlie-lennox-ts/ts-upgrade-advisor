@@ -7,7 +7,7 @@ export async function GET() {
     })
     const html = await res.text()
 
-    const matches = html.match(/\b(2[0-9]\.\d+\.0\.cl|10\.\d+\.0\.cl)\b/g)
+    const matches = html.match(/\b(?:10|[1-9]\d)\.\d+\.0\.cl\b/g)
 
     if (!matches || matches.length === 0) {
       return NextResponse.json({ latest: null })
@@ -22,7 +22,7 @@ export async function GET() {
       return bMinor - aMinor
     })
 
-    return NextResponse.json({ latest: sorted[0], all: sorted.slice(0, 5) })
+    return NextResponse.json({ latest: sorted[0], all: sorted })
   } catch {
     return NextResponse.json({ latest: null })
   }

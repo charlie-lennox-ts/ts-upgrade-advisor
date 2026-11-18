@@ -16,17 +16,15 @@ export async function GET() {
 
     // Extract just the version numbers and deduplicate
     const versions = Array.from(new Set(
-      matches.map(m => m.replace(/Version\s+/i, '').trim())
+      matches.map(m => m.replace(/Version\s+/i, '').trim().replace(/\.+$/, ''))
     ))
 
     // Sort by minor version number descending
     const sorted = versions.sort((a, b) => {
-      const aNum = parseFloat(a.replace('.x', '.0').replace(/^1\./, ''))
-      const bNum = parseFloat(b.replace('.x', '.0').replace(/^1\./, ''))
-      return bNum - aNum
+      return (parseInt(b.split('.')[1], 10) || 0) - (parseInt(a.split('.')[1], 10) || 0)
     })
 
-    return NextResponse.json({ latest: sorted[0], all: sorted.slice(0, 10) })
+    return NextResponse.json({ latest: sorted[0], all: sorted })
   } catch {
     return NextResponse.json({ latest: null })
   }

@@ -85,7 +85,7 @@ export default function VersionSelector({ fromVersion, toVersion, sdkVersion, on
           <div className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full"
                style={{ background: 'rgba(109,210,103,0.1)', border: '1px solid rgba(109,210,103,0.2)', color: '#6DD267' }}>
             <RefreshCw size={10} />
-            {[newClusterFound, newSdkFound].filter(Boolean).join(' · ')} detected
+            Latest release: {[newClusterFound, newSdkFound && `SDK ${newSdkFound}`].filter(Boolean).join(' · ')}
           </div>
         )}
       </div>

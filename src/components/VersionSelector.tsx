@@ -26,6 +26,7 @@ export default function VersionSelector({ fromVersion, toVersion, sdkVersion, on
   const [sdkVersions, setSdkVersions] = useState(SDK_VERSIONS)
   const [newClusterFound, setNewClusterFound] = useState<string | null>(null)
   const [newSdkFound, setNewSdkFound] = useState<string | null>(null)
+  const [showAllTo, setShowAllTo] = useState(false)
 
   useEffect(() => {
     // Auto-detect latest cluster version
@@ -60,6 +61,16 @@ export default function VersionSelector({ fromVersion, toVersion, sdkVersion, on
 
   const fromIdx = clusterVersions.findIndex(v => v.value === fromVersion)
   const toIdx   = clusterVersions.findIndex(v => v.value === toVersion)
+
+  // The list is ordered newest-first, so versions newer than "From" are those before it.
+  // With no "From" selected (or the toggle on) the full list is shown.
+  const toVersions = !showAllTo && fromIdx > 0 ? clusterVersions.slice(0, fromIdx) : clusterVersions
+  const noNewerVersions = !showAllTo && fromIdx === 0
+
+  // If "From" changes so the chosen "To" is no longer a valid upgrade, clear it.
+  useEffect(() => {
+    if (!showAllTo && fromIdx !== -1 && toVersion && toIdx !== -1 && toIdx >= fromIdx) onToChange('')
+  }, [showAllTo, fromIdx, toIdx, toVersion, onToChange])
   const versionSpan = fromIdx !== -1 && toIdx !== -1 ? fromIdx - toIdx : 0
   const bigJump = versionSpan > 4
 
@@ -105,8 +116,17 @@ export default function VersionSelector({ fromVersion, toVersion, sdkVersion, on
           <label style={labelStyle}>To cluster version</label>
           <select value={toVersion} onChange={e => onToChange(e.target.value)} style={selectStyle}>
             <option value="">Select version</option>
-            {clusterVersions.map(v => <option key={v.value} value={v.value}>{v.label}</option>)}
+            {toVersions.map(v => <option key={v.value} value={v.value}>{v.label}</option>)}
           </select>
+          {noNewerVersions && (
+            <p className="text-xs mt-1.5" style={{ color: '#FFC052' }}>No newer versions than {fromVersion}.</p>
+          )}
+          {fromIdx !== -1 && (
+            <button type="button" onClick={() => setShowAllTo(s => !s)}
+                    className="text-xs mt-1.5 underline" style={{ color: '#7AA8C4' }}>
+              {showAllTo ? 'Show upgrades only' : 'Show all versions (including downgrades)'}
+            </button>
+          )}
         </div>
       </div>
 
